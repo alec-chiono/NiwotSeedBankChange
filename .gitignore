@@ -1,0 +1,49 @@
+# ── R Session Artifacts ───────────────────────────────────────────────────────
+.Rproj.user
+.Rhistory
+.RData
+.RDataTmp
+.Rapp.history
+.Ruserdata
+
+# ── Office Temp Lock Files ────────────────────────────────────────────────────
+*.~lock*
+
+# ── R Environment (may contain API keys / secrets) ───────────────────────────
+.Renviron
+
+# ── R Markdown / knitr Cache ─────────────────────────────────────────────────
+*_cache/
+/cache/
+*.utf8.md
+*.knit.md
+
+# ── Stan: Ignore compiled executables, keep .stan source files ───────────────
+scripts/stan/*
+!scripts/stan/*.stan
+
+# ── macOS System Files ────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ── Windows System Files ─────────────────────────────────────────────────────
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# ── Linux System Files ────────────────────────────────────────────────────────
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
