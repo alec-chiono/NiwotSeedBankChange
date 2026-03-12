@@ -6,7 +6,7 @@ librarian::shelf(tidyverse, vegan)
 
 # DATA -------------------------------------------------------------------------
 ## Download
-source("Zenodo_archiving/scripts/source/download_data.R")
+source("scripts/source/download_data.R")
 
 ## Wrangle data
 ### Seed bank data
@@ -71,4 +71,4 @@ fig2 <- sv_scores %>%
   scale_color_manual(values=c("brown4", "green4"))
 
 # Write Figure 2
-ggsave("Zenodo_archiving/figures/fig2.pdf", fig2, width=7.5, height=5, units="in", dpi=600)
+ggsave("figures/fig2.pdf", fig2, width=7.5, height=5, units="in", dpi=600)

@@ -12,7 +12,7 @@ librarian::shelf(tidyverse, cmdstanr, tidybayes, bayesplot, posterior, loo, ggdi
 
 # DATA -------------------------------------------------------------------------
 ## Download
-source("Zenodo_archiving/scripts/source/download_data.R")
+source("scripts/source/download_data.R")
 
 ## Wrangle
 seedbank_df <- data_list$seedbank_composition.ac_hh.data %>%
@@ -39,7 +39,7 @@ dlist <- list(
 options(mc.cores=ifelse(parallel::detectCores()>4, 4, 2)) #set cores for parallel processing
 
 ## Compile model
-mod2 <- cmdstan_model("Zenodo_archiving/scripts/stan/richness_diversity.stan")
+mod2 <- cmdstan_model("scripts/stan/richness_diversity.stan")
 
 ## Fit model
 ### will get warnings as model starts sampling at extreme values but fit is fine
@@ -159,4 +159,4 @@ source("scripts/1_seed_community_RDA.R")
 fig1 <- fig1A / (fig1B + fig1C) + plot_annotation(tag_levels = 'A')
 
 ## Write Figure 1
-ggsave("Zenodo_archiving/figures/fig1.pdf", fig1, width=7.5, height=10, units="in", dpi=600)
+ggsave("figures/fig1.pdf", fig1, width=7.5, height=10, units="in", dpi=600)

@@ -4,7 +4,7 @@
 librarian::shelf(tidyverse, gt, gtExtras) #load packages
 
 # Load data
-source("Zenodo_archiving/scripts/source/download_data.R")
+source("scripts/source/download_data.R")
 saddlegrid_habitat <- read.csv("data/saddlegrid_habitat_types.csv")
 
 data_list$seedbank_composition.ac_hh.data %>%
@@ -48,7 +48,7 @@ data_list$seedbank_composition.ac_hh.data %>%
   ) %>%
   cols_align(align = "center") %>%
   sub_missing(missing_text = "–") %>%
-  gtsave("Zenodo_archiving/figures/Table_S1.html")
+  gtsave("figures/Table_S1.html")
 
 # Veg
 data_list$veg_composition.ac_hh.data %>%
@@ -87,4 +87,4 @@ data_list$veg_composition.ac_hh.data %>%
   ) %>%
   cols_align(align = "center") %>%
   sub_missing(missing_text = "–") %>%
-  gtsave("Zenodo_archiving/figures/Table_S2.html")
+  gtsave("figures/Table_S2.html")

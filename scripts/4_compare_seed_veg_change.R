@@ -11,8 +11,8 @@ librarian::shelf(tidyverse, cmdstanr, tidybayes, bayesplot, ggdist, patchwork)
 
 # DATA -------------------------------------------------------------------------
 ## Download/load
-source("Zenodo_archiving/scripts/source/download_data.R")
-saddlegrid_habitat <- read.csv("Zenodo_archiving/data/saddptqd_xericmesic_categorization.csv") #categorization of long-term veg plots into mesic or xerix dry meadow
+source("scripts/source/download_data.R")
+saddlegrid_habitat <- read.csv("data/saddptqd_xericmesic_categorization.csv") #categorization of long-term veg plots into mesic or xerix dry meadow
 
 ## Wrangle seed bank data
 seedbank_df <- data_list$seedbank_composition.ac_hh.data  %>%
@@ -56,9 +56,12 @@ spp_to_include <- data_list$seedbank_composition.ac_hh.data   %>%
 
 ### Filter seed bank data
 seedf <- seedbank_df %>%
-  filter(paste0(USDA_name, habitat) %in% with(spp_to_include, paste0(USDA_name, habitat)))
+  filter(
+    USDA_name %in% saddlegrid_df$USDA_name, #rm species that aren't in veg data
+    paste0(USDA_name, habitat) %in% with(spp_to_include, paste0(USDA_name, habitat)) #remove species-habitat combos that werent present
+    )
 
-### Filter veg data to only include speceis in seed bank
+### Filter veg data to only include species now in seedf
 vegf <- saddlegrid_df %>% filter(USDA_code%in%seedf$USDA_code)
 
 
@@ -119,7 +122,7 @@ dlist <- list(
 options(mc.cores=ifelse(parallel::detectCores()>4, 4, 2)) #set cores for parallel processing
 
 ## Compile
-mod4 <- cmdstan_model("Zenodo_archiving/scripts/stan/compare_seed_veg_change_w_habitat.stan")
+mod4 <- cmdstan_model("scripts/stan/compare_seed_veg_change_w_habitat.stan")
 
 ## Fit model
 ### will get warnings as model starts sampling at extreme values but fit is fine
@@ -234,7 +237,7 @@ fig3C <- rel_draws %>%
 
 fig3 <- ((fig3A + fig3B + plot_layout(axes="collect")) / fig3C) + plot_layout(guides="collect")
 
-ggsave("Zenodo_archiving/figures/fig3.pdf", fig3, width=7.5, height=5, units="in", dpi=600)
+ggsave("figures/fig3.pdf", fig3, width=7.5, height=5, units="in", dpi=600)
 
 
 # Model without habitat --------------------------------------------------------
@@ -333,7 +336,7 @@ dlist <- list(
 options(mc.cores=ifelse(parallel::detectCores()>4, 4, 2)) #set cores for parallel processing
 
 # Compile model
-mod4 <- cmdstan_model("Zenodo_archiving/scripts/stan/compare_seed_veg_change_w_habitat.stan")
+mod4 <- cmdstan_model("scripts/stan/compare_seed_veg_change_w_habitat.stan")
 
 # Fit model
 ## will get warnings as model starts sampling at extreme values but fit is fine
@@ -467,4 +470,4 @@ figS3 <- (figS3A | figS3B) / figS3C +
   plot_annotation(tag_levels='A')
 
 # Write Figure 3
-ggsave("Zenodo_archiving/figures/figS3.pdf", figS3, width=7.5, height=5, units="in", dpi=600)
+ggsave("figures/figS3.pdf", figS3, width=7.5, height=5, units="in", dpi=600)

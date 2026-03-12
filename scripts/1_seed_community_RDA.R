@@ -6,7 +6,7 @@ librarian::shelf(tidyverse, vegan, ggrepel)
 
 # DATA -------------------------------------------------------------------------
 ## Download
-source("Zenodo_archiving/scripts/source/download_data.R")
+source("scripts/source/download_data.R")
 
 ## Wrangle
 sc_df <- data_list$seedbank_composition.ac_hh.data %>%
@@ -67,7 +67,7 @@ figS1 <- sc_scores %>%
   geom_label_repel(data=spp_scores, aes(label=USDA_code), size=3, max.overlaps=100)
 
 ### Write Fig. S1
-ggsave("Zenodo_archiving/figures/figS1.pdf", figS1, width=7.5, height=7.5, units="in", dpi=600)
+ggsave("figures/figS1.pdf", figS1, width=7.5, height=7.5, units="in", dpi=600)
 
 # Distance-based RDA -----------------------------------------------------------
 ## to evaluate if compositional changes are due to species turnover
@@ -110,4 +110,4 @@ figS2 <- sc_db_scores %>%
   scale_color_manual(values=c("skyblue3", "red4"))
 
 ### Write Fig. S2
-ggsave("Zenodo_archiving/figures/figS2.pdf", figS2, width=7.5, height=7.5, units="in", dpi=600)
+ggsave("figures/figS2.pdf", figS2, width=7.5, height=7.5, units="in", dpi=600)
