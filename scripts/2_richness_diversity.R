@@ -47,7 +47,6 @@ fit2 <- mod2$sample(
   data=dlist,
   chains=4,
   seed=4879523,
-  iter_sampling=1000,
   adapt_delta=0.99
 )
 
@@ -64,11 +63,15 @@ yrep <- matrix(
     size=as.vector(phi_draws)),
   nrow=nrow(log_lam)
   )
-ppc_stat(dlist$count, yrep, stat = \(y) mean(y == 0)) #proportion of zeroes
-ppc_stat(dlist$count, yrep, stat=\(y)var(y)/mean(y)) #dispersion ratio
-ppc_stat(dlist$count, yrep_samp, stat = \(y) quantile(y, 0.9)) #90th percentile (i.e. tail-heaviness)
-ppc_stat(dlist$count, yrep_samp, stat = "median") #mean
-ppc_stat(dlist$count, yrep, stat="sd") #std dev
+
+ppc2A <- ppc_stat(dlist$count, yrep, stat = \(y) mean(y == 0)) #proportion of zeroes
+ppc2B <- ppc_stat(dlist$count, yrep, stat=\(y)var(y)/mean(y)) #dispersion ratio
+ppc2C <- ppc_stat(dlist$count, yrep, stat = \(y) quantile(y, 0.9)) #90th percentile (i.e. tail-heaviness)
+ppc2D <- ppc_stat(dlist$count, yrep, stat = "median") #mean
+ppc2E <- ppc_stat(dlist$count, yrep, stat="sd") #std dev
+
+ppc2 <- ppc2A / ppc2B / ppc2C / ppc2D / ppc2E + plot_annotation(tag_levels = "A")
+ggsave("figures/figS4.pdf", ppc2, width=10, height=10, units="in", dpi=600)
 
 lv <- fit2$loo(save_psis = TRUE)
 ppc_loo_pit_qq(dlist$count, yrep, psis_object = lv$psis_object)
