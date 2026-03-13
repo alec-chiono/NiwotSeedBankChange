@@ -17,13 +17,10 @@ data {
 
 parameters {
   real mu_global;  // global intercept
-  vector[N_years] year_effect_raw;             // standardized year effects
-  vector[N_habitats] habitat_effect_raw;       // standardized habitat effects
-  matrix[N_years, N_habitats] year_hab_int_raw;// standardized year-by-habitat interactions
+  real year_effect;        // fixed effect for year (2023 vs. 1989 contrast)
+  real habitat_effect;     // fixed effect for habitat (xeric vs. mesic contrast)
+  real year_hab_int;       // fixed year × habitat interaction
   vector[N_plots] plot_effect_raw;             // standardized plot effects
-  real<lower=0> sigma_year;                    // SD of year effects
-  real<lower=0> sigma_habitat;                 // SD of habitat effects
-  real<lower=0> sigma_interaction;             // SD of year:habitat interaction effects
   real<lower=0> sigma_plot;                    // SD of plot effects
   matrix[N_species, N_habitats] species_habitat_raw;        // baseline habitat:species interaction
   matrix[N_species, N_habitats] species_habitat_change_raw; // change in habitat:species interaction across years
@@ -36,9 +33,6 @@ transformed parameters {
   // Linear predictor (log-scale abundance/intensity)
   vector[N_obs] log_lambda;
   // Apply SD to mean effects to generate actual effects
-  vector[N_years] year_effect = sigma_year * year_effect_raw;
-  vector[N_habitats] habitat_effect = sigma_habitat * habitat_effect_raw;
-  matrix[N_years, N_habitats] year_hab_int = sigma_interaction * year_hab_int_raw;
   vector[N_plots] plot_effect = sigma_plot * plot_effect_raw;
   matrix[N_species, N_habitats] species_habitat = sigma_species_habitat * species_habitat_raw;
   matrix[N_species, N_habitats] species_habitat_change = sigma_species_habitat_change * species_habitat_change_raw;
@@ -51,9 +45,9 @@ transformed parameters {
 
     log_lambda[i] =
       mu_global +
-      year_effect[year_idx[i]] +
-      habitat_effect[habitat_idx[i]] +
-      year_hab_int[year_idx[i], habitat_idx[i]] +
+      year_effect * (year_idx[i] == N_years ? 1 : 0) +
+      habitat_effect * (habitat_idx[i] == 2 ? 1 : 0) +
+      year_hab_int * (year_idx[i] == N_years ? 1 : 0) * (habitat_idx[i] == 2 ? 1 : 0) +
       plot_effect[plot[i]] +
       species_habitat[species[i], habitat_idx[i]] +
       temporal_change;
@@ -64,17 +58,15 @@ model {
   // Priors (weakly informative)
   // Global intercept
   mu_global ~ student_t(3, 0, 2.5);
+  // Fixed effects
+  year_effect ~ student_t(3, 0, 2.5);
+  habitat_effect ~ student_t(3, 0, 2.5);
+  year_hab_int ~ student_t(3, 0, 1);
   // SDs slightly tighter
-  sigma_year ~ normal(0, 0.5);
-  sigma_habitat ~ normal(0, 2);
-  sigma_interaction ~ normal(0, 0.5); // interactions even tighter
   sigma_plot ~ normal(0, 0.5);
   sigma_species_habitat ~ normal(0, 0.5);
   sigma_species_habitat_change ~ normal(0, 0.25); // interactions even tighter
   // All "raw" terms standard normal
-  year_effect_raw ~ std_normal();
-  habitat_effect_raw ~ std_normal();
-  to_vector(year_hab_int_raw) ~ std_normal();
   plot_effect_raw ~ std_normal();
   to_vector(species_habitat_raw) ~ std_normal();
   to_vector(species_habitat_change_raw) ~ std_normal();
@@ -105,9 +97,9 @@ generated quantities {
       // Expected log-abundance per species for this year–habitat combination
       vector[N_species] log_expected =
         mu_global +
-        year_effect[y] +
-        habitat_effect[h] +
-        year_hab_int[y, h] +
+        year_effect * (y == N_years ? 1 : 0) +
+        habitat_effect * (h == 2 ? 1 : 0) +
+        year_hab_int * (y == N_years ? 1 : 0) * (h == 2 ? 1 : 0) +
         species_habitat[, h] +
         (y == N_years ? species_habitat_change[, h] : rep_vector(0, N_species));
 
@@ -125,7 +117,7 @@ generated quantities {
         // Species Richness
         richness[y, h] = 0;
         for (s in 1:N_species)
-          if (expected_abund[s] >= 0.5)
+          if (expected_abund[s] >= .25)
             richness[y, h] += 1;
 
         // Compute Shannon’s H', which is used to calculate evenness and diversity
@@ -134,7 +126,7 @@ generated quantities {
 
         // Restrict to species judged “present” (> 0.5 abundance threshold)
         for (s in 1:N_species)
-          if (expected_abund[s] > 0.5) {
+          if (expected_abund[s] > .25) {
             p_present[s] = p[s];
             total_present += p[s];
           }
@@ -147,6 +139,7 @@ generated quantities {
             if (p_present[s] > 1e-12)  // make sure don't take log of zero
               H_present += -p_present[s] * log(p_present[s]);
         }
+
 
         // Hill number N1 = exp(H’)
         hill_N1[y, h] = exp(H_present);

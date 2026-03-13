@@ -42,12 +42,12 @@ options(mc.cores=ifelse(parallel::detectCores()>4, 4, 2)) #set cores for paralle
 mod2 <- cmdstan_model("scripts/stan/richness_diversity.stan")
 
 ## Fit model
-### will get warnings as model starts sampling at extreme values but fit is fine
+### may get warnings as model starts sampling at extreme values but fit is fine
 fit2 <- mod2$sample(
   data=dlist,
   chains=4,
   seed=4879523,
-  adapt_delta=0.99
+  adapt_delta=0.95
 )
 
 ## Check model diagnostics (model doesn't always automatically warn you when there are issues)
@@ -96,7 +96,7 @@ post2_counts <-
   group_by(.draw, year, habitat) %>%
   summarize(scaled_total = sum(scaled_count), .groups="drop") %>%
   mutate(
-    metric = "Scaled Total Seeds",
+    metric = "Total Seeds Scaled",
     year = factor(year, levels = 1:dlist$N_years, labels = sort(unique(seedbank_df$year))),
     habitat = factor(habitat, levels = 1:dlist$N_habitats, labels = sort(unique(seedbank_df$habitat))),
     value = scaled_total

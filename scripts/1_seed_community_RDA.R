@@ -73,11 +73,14 @@ ggsave("figures/figS1.pdf", figS1, width=7.5, height=7.5, units="in", dpi=600)
 ## to evaluate if compositional changes are due to species turnover
 
 ## Wrangle data for dbRDA
-sc_dist <- sc_df %>%
+sc_dist_df <- sc_df %>%
   mutate(row_sum = rowSums(select(., -(year:depth)), na.rm = TRUE)) %>%
   filter(row_sum > 0) %>% #remove samples that did not have any species present (since these would have distance of 0 to all other samples and cause issues for dbRDA)
-  select(-(year:depth), -row_sum) %>%
-  mutate(across(everything(), ~ ifelse(. > 0, 1, 0))) %>% #convert to presence absence
+  select(-row_sum) %>%
+  mutate(across(-(year:depth), ~ ifelse(. > 0, 1, 0))) #convert to presence absence
+
+sc_dist <- sc_dist_df %>%
+  select(-(year:depth)) %>%
   as.matrix() %>%
   vegdist(method="jaccard") #convert into jaccard distance matrix
 
