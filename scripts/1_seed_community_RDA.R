@@ -12,15 +12,19 @@ source("scripts/source/download_data.R")
 sc_df <- data_list$seedbank_composition.ac_hh.data %>%
   filter(substr(USDA_code,1, 1)!=2 & USDA_code!="CAREX" & USDA_code!="POA") %>%  #remove records not identified to species
   select(year:USDA_code, count) %>% #select relevant columns
-  pivot_wider(names_from=USDA_code, values_from=count) #pivot into format for RDA
+  pivot_wider(names_from=USDA_code, values_from=count) %>%  #pivot into proper format for analyses
+  filter(rowSums(across(-(year:depth))) > 0) #remove samples that had no species present
 
-# RDA --------------------------------------------------------------------------
+# ANAlYSES ---------------------------------------------------------------------
 ## Pull out community data and do Hellinger transformation
-sc_matrix <- as.matrix(select(sc_df, -(year:depth))) %>% #pull out just community data for use in rda()
-  decostand(method = "hellinger") #and do Hellinger transformation (https://r.qcbs.ca/workshop09/book-en/transformations.html)
+sc_matrix <- as.matrix(select(sc_df, -(year:depth))) #pull out just count data
+
+## DCA to determine if we should do RDA or CCA
+dca <- decorana(sc_matrix)
+print(dca) #DCA1 axis length is 1.003, so will do RDA
 
 ## Fit RDA
-sc_rda <- rda(sc_matrix ~
+sc_rda <- rda(decostand(sc_matrix, method = "hellinger") ~ #Hellinger transformation (https://r.qcbs.ca/workshop09/book-en/transformations.html)
                 year*habitat*depth #variables of interest
                 + Condition(plot), #spatial structure
               data=sc_df)
@@ -73,13 +77,13 @@ ggsave("figures/figS1.pdf", figS1, width=7.5, height=7.5, units="in", dpi=600)
 ## to evaluate if compositional changes are due to species turnover
 
 ## Wrangle data for dbRDA
-sc_dist_df <- sc_df %>%
-  mutate(row_sum = rowSums(select(., -(year:depth)), na.rm = TRUE)) %>%
-  filter(row_sum > 0) %>% #remove samples that did not have any species present (since these would have distance of 0 to all other samples and cause issues for dbRDA)
-  select(-row_sum) %>%
-  mutate(across(-(year:depth), ~ ifelse(. > 0, 1, 0))) #convert to presence absence
+sc_dist <- sc_df %>%
+  mutate(across(-(year:depth), ~ ifelse(. > 0, 1, 0))) %>%  #convert to presence absence
+  select(-(year:depth)) %>%
+  as.matrix() %>%
+  vegdist(method="jaccard") #convert into jaccard distance matrix
 
-sc_dist <- sc_dist_df %>%
+sc_dist2 <- sc_df %>%
   select(-(year:depth)) %>%
   as.matrix() %>%
   vegdist(method="jaccard") #convert into jaccard distance matrix
@@ -88,7 +92,7 @@ sc_dist <- sc_dist_df %>%
 sc_dbrda <- dbrda(sc_dist ~
                     year*habitat*depth #variables of interest
                   + Condition(plot), #spatial structure
-                  data=sc_dist_df,
+                  data=sc_df,
                   distance="jaccard")
 
 ## Evaluate model significance
