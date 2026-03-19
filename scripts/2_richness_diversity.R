@@ -156,7 +156,7 @@ fig1C <- post2 %>%
         axis.ticks.x=element_blank())
 
 ## Get ggplot obj for Fig. 1A
-source("scripts/1_seed_community_RDA.R")
+suppressMessages(capture.output(source("scripts/1_seed_community_RDA.R"), file = nullfile()))
 
 ## Collate Figure 1
 fig1 <- fig1A / (fig1B + fig1C) + plot_annotation(tag_levels = 'A')

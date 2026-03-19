@@ -2,7 +2,7 @@
 # Alec Chiono; alec.chiono@colorado.edu
 
 # PACKAGES ---------------------------------------------------------------------
-librarian::shelf(tidyverse, vegan, ggrepel)
+librarian::shelf(tidyverse, vegan, permute, betapart, indicspecies, ggrepel)
 
 # DATA -------------------------------------------------------------------------
 ## Download
@@ -15,19 +15,26 @@ sc_df <- data_list$seedbank_composition.ac_hh.data %>%
   pivot_wider(names_from=USDA_code, values_from=count) %>%  #pivot into proper format for analyses
   filter(rowSums(across(-(year:depth))) > 0) #remove samples that had no species present
 
-# ANAlYSES ---------------------------------------------------------------------
-## Pull out community data and do Hellinger transformation
-sc_matrix <- as.matrix(select(sc_df, -(year:depth))) #pull out just count data
+# RDA ---------------------------------------------------------------------
+## Pull out abundance data
+sc_matrix <- sc_df %>%
+  select(-(year:depth)) %>%
+  as.matrix()
+
+## Pull out meta data
+sc_meta <- sc_df %>%
+  select(year:depth) %>%
+  mutate(across(everything(), as.factor)) #pull out just metadata and make year a factor
 
 ## DCA to determine if we should do RDA or CCA
 dca <- decorana(sc_matrix)
 print(dca) #DCA1 axis length is 1.003, so will do RDA
 
 ## Fit RDA
-sc_rda <- rda(decostand(sc_matrix, method = "hellinger") ~ #Hellinger transformation (https://r.qcbs.ca/workshop09/book-en/transformations.html)
+sc_rda <- rda(decostand(sc_matrix, method="hellinger") ~ #Hellinger transformation (https://r.qcbs.ca/workshop09/book-en/transformations.html)
                 year*habitat*depth #variables of interest
                 + Condition(plot), #spatial structure
-              data=sc_df)
+              data=sc_meta)
 
 ## Evaluate model significance
 anova.cca(sc_rda, step=1000) #check overall significance
@@ -35,9 +42,7 @@ anova.cca(sc_rda, step=1000, by="axis") #check axes significance
 anova.cca(sc_rda, step=1000, by="margin", scope=c("year", "habitat", "depth", "year:habitat", "year:depth", "habitat:depth", "year:habitat:depth")) #check which terms significant
 
 ## Extract sample scores
-sc_scores <- sc_df %>%
-  select(year:depth) %>%
-  mutate(year=factor(year)) %>%
+sc_scores <- sc_meta %>%
   cbind(scores(sc_rda)$sites)
 
 ## Extract species scores
@@ -73,48 +78,65 @@ figS1 <- sc_scores %>%
 ### Write Fig. S1
 ggsave("figures/figS1.pdf", figS1, width=7.5, height=7.5, units="in", dpi=600)
 
-# Distance-based RDA -----------------------------------------------------------
-## to evaluate if compositional changes are due to species turnover
+# PERMANOVA --------------------------------------------------------------------
+## Bray-Curtis distance matrix
+bc_dist <- vegdist(sc_matrix, method="bray")
 
-## Wrangle data for dbRDA
-sc_dist <- sc_df %>%
-  mutate(across(-(year:depth), ~ ifelse(. > 0, 1, 0))) %>%  #convert to presence absence
-  select(-(year:depth)) %>%
-  as.matrix() %>%
-  vegdist(method="jaccard") #convert into jaccard distance matrix
+## Fit PERMANOVA
+adonis2(bc_dist ~
+          year*habitat*depth,
+        data=sc_meta,
+        permutations=how(nperm=999, blocks=sc_meta$plot),
+        by="terms")
 
-sc_dist2 <- sc_df %>%
-  select(-(year:depth)) %>%
-  as.matrix() %>%
-  vegdist(method="jaccard") #convert into jaccard distance matrix
+# BETADISPER -------------------------------------------------------------------
+## Test for homogeneity of multivariate dispersions (i.e., beta diversity)
 
-## Fit dbRDA
-sc_dbrda <- dbrda(sc_dist ~
-                    year*habitat*depth #variables of interest
-                  + Condition(plot), #spatial structure
-                  data=sc_df,
-                  distance="jaccard")
+# Year
+bd_year <- betadisper(bc_dist, group=sc_meta$year)
+permutest(bd_year, permutations=999)
 
-## Evaluate model significance
-anova.cca(sc_dbrda, step=1000) #check overall significance
-anova.cca(sc_dbrda, step=1000, by="axis") #check axes significance
-anova.cca(sc_dbrda, step=1000, by="margin", scope=c("year", "habitat", "depth", "year:habitat", "year:depth", "habitat:depth", "year:habitat:depth")) #check which terms significant
+# Habitat
+bd_habitat <- betadisper(bc_dist, group=sc_meta$habitat)
+permutest(bd_habitat, permutations=999)
 
-## Extract sample scores
-sc_db_scores <- sc_dist_df %>%
-  select(year:depth) %>%
-  cbind(scores(sc_dbrda)$sites) %>%
-  mutate(year=factor(year))
+# Depth
+bd_depth <- betadisper(bc_dist, group=sc_meta$depth)
+permutest(bd_depth, permutations=999)
 
-## Fig. S2: Species composition based on presence-absence alone
-figS2 <- sc_db_scores %>%
-  mutate(habitat_depth=paste(habitat, depth, sep="_")) %>%
-  ggplot(aes(x=dbRDA1, y=dbRDA2 , group=paste0(habitat,plot,depth))) +
-  geom_vline(xintercept=0, linetype="dashed", color="gray70") +
-  geom_hline(yintercept=0, linetype="dashed", color="gray70") +
-  geom_point(aes(color=year, shape=habitat), size=5) +
-  scale_shape_manual(values=c(16, 17)) +
-  scale_color_manual(values=c("skyblue3", "red4"))
+# BETAPART DECOMPOSITION -------------------------------------------------------
+# Requires raw abundance matrix (not hellinger transformed)
+beta_abund <- beta.pair.abund(sc_matrix, index.family="bray")
 
-### Write Fig. S2
-ggsave("figures/figS2.pdf", figS2, width=7.5, height=7.5, units="in", dpi=600)
+# Three distance matrices:
+# beta_abund$beta.bray    =total Bray-Curtis dissimilarity
+# beta_abund$beta.bray.bal=balanced variation (turnover component)
+# beta_abund$beta.bray.gra=abundance gradient component
+
+# Total
+adonis2(beta_abund$beta.bray ~ year*habitat*depth,
+        data=sc_meta, permutations=how(nperm=999, blocks=sc_meta$plot), by="terms")
+
+# Turnover component
+adonis2(beta_abund$beta.bray.bal ~ year*habitat*depth,
+        data=sc_meta, permutations=how(nperm=999, blocks=sc_meta$plot), by="terms")
+
+# Abundance gradient component
+adonis2(beta_abund$beta.bray.gra ~ year*habitat*depth,
+        data=sc_meta, permutations=how(nperm=999, blocks=sc_meta$plot), by="terms")
+
+
+
+# INDICATOR SPECIES ANALYSIS ---------------------------------------------------
+# Create a combined grouping variable for year x habitat combinations
+sc_meta <- sc_meta %>%
+  mutate(year_habitat = interaction(year, habitat, sep = "_"))
+
+# Run indicator species analysis
+# Using the abundance matrix (not presence/absence)
+indval_result <- multipatt(sc_matrix,
+                           cluster = sc_meta$year_habitat,
+                           func = "IndVal.g",        # corrected IndVal
+                           control = how(nperm=999, blocks=sc_meta$plot))
+
+summary(indval_result, indvalcomp = TRUE, alpha = 0.05)
