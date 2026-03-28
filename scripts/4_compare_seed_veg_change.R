@@ -178,25 +178,25 @@ seed_draws <- lapply(USDA_lookup$USDA_code_id, function(x) {
         (b_seed_mesic + get(paste0("beta_seed_habitat_bveg[", x, "]"))) * get(paste0("b_veg[", x, ",2]")) +
         get(paste0("beta_seed_habitat[", x, "]")) * 1
     ) %>%
-    select(USDA_code_id, mesic, xeric)
+    select(.draw, USDA_code_id, mesic, xeric)
 }) %>%
   do.call(rbind, .) %>%
   pivot_longer(cols=c(mesic, xeric), names_to="habitat", values_to="value") %>%
   mutate(USDA_name=USDA_lookup$USDA_name[USDA_code_id]) %>%
-  select(habitat, USDA_name, value) %>%
+  select(.draw, habitat, USDA_name, value) %>%
   filter(paste0(USDA_name, habitat) %in% with(spp_to_include, paste0(USDA_name, habitat)))
 
 ## Get posterior draws for predicted veg change
 veg_draws <- tidy_draws(fit4) %>%
-  select(starts_with("b_veg")) %>%
-  pivot_longer(cols=everything(), names_to="parameter", values_to="value") %>%
+  select(.draw, starts_with("b_veg")) %>%
+  pivot_longer(cols=-.draw, names_to="parameter", values_to="value") %>%
   mutate(
     USDA_code_id=as.integer(str_extract(parameter, "(?<=\\[)\\d+")),
     USDA_name=USDA_lookup$USDA_name[USDA_code_id],
     habitat_id=as.integer(str_extract(parameter, "(?<=,)\\d+")),
     habitat=if_else(habitat_id == 1, "mesic", "xeric")
   ) %>%
-  select(habitat, USDA_name, value) %>%
+  select(.draw, habitat, USDA_name, value) %>%
   filter(paste0(USDA_name, habitat) %in% with(spp_to_include, paste0(USDA_name, habitat)))
 
 ## Get posterior draws for relationship between veg and seed change
