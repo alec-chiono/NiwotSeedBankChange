@@ -18,6 +18,7 @@ saddlegrid_habitat <- read.csv("data/saddptqd_xericmesic_categorization.csv") #c
 seedbank_df <- data_list$seedbank_composition.ac_hh.data  %>%
   select(year:USDA_name, count) %>%  #select relevant columns
   filter(substr(USDA_code,1, 1)!=2 & USDA_code!="CAREX" & USDA_code!="POA") %>%  #remove records not identified to species
+  mutate(USDA_name=sub("\\s*var\\..*$", "", USDA_name)) %>%
   group_by(year, habitat, plot, USDA_code, USDA_name) %>%
   summarize(count=sum(count), .groups="drop") %>%
   group_by(USDA_code, USDA_name) %>%
@@ -33,6 +34,7 @@ saddlegrid_df <- data_list$saddptqd.hh.data.csv %>%
     plot%in%saddlegrid_habitat$plot,
     hit_type%in%c("top","bottom") #middle and extra hits haven't been done across whole time period
   ) %>%
+  mutate(USDA_name=sub("\\s*var\\..*$", "", USDA_name)) %>%
   group_by(year, plot, USDA_code) %>%
   summarize(count=length(hit_type), .groups="drop") %>%
   complete(plot, USDA_code, year, fill=list(count=0)) %>% #add records for species not seen in some years
@@ -130,11 +132,11 @@ fit4 <- mod4$sample(
   data=dlist,
   chains=4,
   seed=5336,
-  adapt_delta=.95,
+  adapt_delta=.99,
   max_treedepth=15
 )
 
-## Check model diagnostics (model doesn't always automatically warn you when there are issues)
+## Check model diagnostics (model doesn't automatically warn you when there are Rhat issues)
 fit4$cmdstan_diagnose()
 
 ## Posterior Predictive Checks
@@ -167,22 +169,21 @@ theme_set(
 seed_draws <- lapply(USDA_lookup$USDA_code_id, function(x) {
   tidy_draws(fit4) %>%
     mutate(
-      USDA_code_id=x,
-      # Expected seed change for MESIC habitat (habitat=0 -> b_veg col 1)
-      mesic=get(paste0("a_seed[", x, "]")) +
-        b_seed_mesic * get(paste0("b_veg[", x, ",1]")) +
-        get(paste0("beta_seed_habitat[", x, "]")) * 0 +
-        get(paste0("beta_seed_habitat_bveg[", x, "]")) * 0 * get(paste0("b_veg[", x, ",1]")),
-      # Expected seed change for XERIC habitat (habitat=1 -> b_veg col 2)
-      xeric=get(paste0("a_seed[", x, "]")) +
-        (b_seed_mesic + get(paste0("beta_seed_habitat_bveg[", x, "]"))) * get(paste0("b_veg[", x, ",2]")) +
+      USDA_code_id = x,
+      mesic = get(paste0("a_seed[", x, "]")) +
+        get(paste0("b_seed_mesic[", x, "]")) *              # ← species-indexed
+        get(paste0("b_veg[", x, ",1]")),
+      xeric = get(paste0("a_seed[", x, "]")) +
+        (get(paste0("b_seed_mesic[", x, "]")) +             # ← species-indexed
+           get(paste0("beta_seed_habitat_bveg[", x, "]"))) *
+        get(paste0("b_veg[", x, ",2]")) +
         get(paste0("beta_seed_habitat[", x, "]")) * 1
     ) %>%
     select(.draw, USDA_code_id, mesic, xeric)
 }) %>%
   do.call(rbind, .) %>%
-  pivot_longer(cols=c(mesic, xeric), names_to="habitat", values_to="value") %>%
-  mutate(USDA_name=USDA_lookup$USDA_name[USDA_code_id]) %>%
+  pivot_longer(cols = c(mesic, xeric), names_to = "habitat", values_to = "value") %>%
+  mutate(USDA_name = USDA_lookup$USDA_name[USDA_code_id]) %>%
   select(.draw, habitat, USDA_name, value) %>%
   filter(paste0(USDA_name, habitat) %in% with(spp_to_include, paste0(USDA_name, habitat)))
 
@@ -200,15 +201,20 @@ veg_draws <- tidy_draws(fit4) %>%
   filter(paste0(USDA_name, habitat) %in% with(spp_to_include, paste0(USDA_name, habitat)))
 
 ## Get posterior draws for relationship between veg and seed change
-rel_draws <- tidy_draws(fit4) %>%
-  mutate(b_seed_xeric=b_seed_mesic + rowMeans(across(starts_with("beta_seed_habitat_bveg")))) %>%
-  select(b_seed_mesic, b_seed_xeric) %>%
-  pivot_longer(
-    cols=everything(),
-    names_to="habitat",
-    values_to="b_seed"
-  ) %>%
-  mutate(habitat=recode(habitat, b_seed_mesic ="mesic", b_seed_xeric ="xeric"))
+rel_draws <- lapply(USDA_lookup$USDA_code_id, function(x) {
+  tidy_draws(fit4) %>%
+    transmute(
+      .draw,
+      USDA_code_id = x,
+      mesic = get(paste0("b_seed_mesic[", x, "]")),
+      xeric = get(paste0("b_seed_mesic[", x, "]")) +
+        get(paste0("beta_seed_habitat_bveg[", x, "]"))
+    )
+}) %>%
+  do.call(rbind, .) %>%
+  pivot_longer(cols = c(mesic, xeric), names_to = "habitat", values_to = "b_seed") %>%
+  mutate(USDA_name = USDA_lookup$USDA_name[USDA_code_id]) %>%
+  filter(paste0(USDA_name, habitat) %in% with(spp_to_include, paste0(USDA_name, habitat)))
 
 ## Figure out rank order for species on y-axis
 spp_order <- seed_draws %>%
@@ -247,18 +253,19 @@ fig3C <- rel_draws %>%
   ggplot(aes(x=b_seed, fill=habitat)) +
   stat_slab(alpha=0.5, normalize="groups") +
   geom_vline(xintercept=0, linetype=2, color="red") +
-  scale_x_continuous(name="Relationship between Seed Change and Veg Change") +
+  scale_x_continuous(name="Relationship between Seed Change and Veg Change", limits=c(-20,20)) +
   scale_fill_manual(values=c("mesic"="green4", "xeric"="tan4"), guide="none") +
   theme(
     axis.title.y=element_blank(),
     axis.text.y=element_blank(),
-    axis.ticks.y=element_blank(),
+    axis.ticks.y=element_blank()
   )
 
 fig3 <- ((fig3A + fig3B + plot_layout(axes="collect")) / fig3C) +
-  plot_layout(guides="collect") + plot_annotation(tag_level="A")
+  plot_layout(guides="collect")
 
 ggsave("figures/fig3.pdf", fig3, width=7.5, height=5, units="in", dpi=600)
+ggsave("figures/fig3.png", fig3, width=10, height=4, units="in", dpi=600, bg="white")
 
 
 # MODEL w/o HABITAT ------------------------------------------------------------

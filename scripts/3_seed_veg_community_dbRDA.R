@@ -79,7 +79,7 @@ fig2 <- sv_scores %>%
   theme(legend.position="top")
 
 # Write Figure 2
-ggsave("figures/fig2.pdf", fig2, width=7.5, height=5, units="in", dpi=600)
+ggsave("figures/fig2.pdf", fig2, width=7.5, height=5, units="in", dpi=600, bg="white")
 
 # PERMANOVA --------------------------------------------------------------------
 ## Aggregate soil samples for each plot so blocking design does not invalidate PERMANOVA

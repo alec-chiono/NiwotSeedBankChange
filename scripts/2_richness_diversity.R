@@ -46,11 +46,10 @@ mod2 <- cmdstan_model("scripts/stan/richness_diversity.stan")
 fit2 <- mod2$sample(
   data=dlist,
   chains=4,
-  seed=4879523,
-  adapt_delta=0.95
+  seed=11001001
 )
 
-## Check model diagnostics (model doesn't always automatically warn you when there are issues)
+## Check model diagnostics (model doesn't automatically warn you when there are Rhat issues)
 fit2$cmdstan_diagnose()
 
 ## Posterior Predictive Check
@@ -130,10 +129,10 @@ fig1B <- post2 %>%
     y_slab = if_else(metric != "Species Richness", value, NA)
   ) %>%
   ggplot(aes(x=year)) +
-  stat_dots(aes(y=y_dots), fill="NA",color="black", linewidth=0.1, normalize="panels") +
-  stat_slab(aes(y=y_slab), fill="black",color="black", linewidth=0.1, normalize="panels") +
+  #stat_dots(aes(y=y_dots), fill="NA",color="black", linewidth=0.1, normalize="panels") +
+  stat_slab(aes(y=value), fill="black",color="black", linewidth=0.1, normalize="panels") +
   facet_grid(metric ~ habitat, scales="free_y") +
-  scale_y_continuous(name="Estimated Value")
+  scale_y_continuous(name="Estimated Value", limits=c(0, NA))
 
 ## Fig. 1C Estimates for change in indices over time
 fig1C <- post2 %>%
@@ -146,14 +145,16 @@ fig1C <- post2 %>%
     y_slab = if_else(metric != "Species Richness", diff, NA)
   ) %>%
   ggplot() +
-  stat_dots(aes(y=y_dots), fill="NA",color="black", linewidth=0.1, normalize="panels") +
-  stat_slab(aes(y=y_slab), fill="black",color="black", linewidth=0.1, normalize="panels") +
+  #stat_dots(aes(y=y_dots), fill="NA",color="black", linewidth=0.1, normalize="panels") +
+  stat_slab(aes(y=diff), fill="black",color="black", linewidth=0.1, normalize="panels") +
   geom_hline(yintercept=0, linetype="dashed", color="red") +
   facet_grid(metric ~ habitat, scales="free_y") +
   scale_y_continuous(name="Difference between Years") +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank())
+
+fig1B+fig1C
 
 ## Get ggplot obj for Fig. 1A
 suppressMessages(capture.output(source("scripts/1_seed_community_RDA.R"), file = nullfile()))

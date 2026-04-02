@@ -61,6 +61,8 @@ fig1A <- sc_scores %>%
   scale_color_manual(values=c("skyblue3", "red4")) +
   theme(legend.position="top")
 
+ggsave("figures/fig1A.png", fig1A, width=5, height=5, units="in", dpi=600, bg="white")
+
 # PERMANOVA --------------------------------------------------------------------
 ## Bray-Curtis distance matrix
 bc_dist <- vegdist(sc_matrix, method="bray")

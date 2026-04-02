@@ -79,22 +79,19 @@ model {
 }
 
 generated quantities {
-  // Store log lambda and log likelihood for easier PPC later
   vector[N_obs] log_lambda_gq = log_lambda;
   vector[N_obs] log_lik;
   for (n in 1:N_obs) log_lik[n] = neg_binomial_2_log_lpmf(count[n] | log_lambda[n], phi);
 
-
-  // Biodiversity indices by year and habitat
-  array[N_years, N_habitats] int richness;     // count of predicted species above threshold
-  array[N_years, N_habitats] real evenness;    // Pielou’s J' (H'/Hmax)
-  array[N_years, N_habitats] real hill_N1;     // Hill number (exp(Shannon H'))
-  // Predicted seed counts by year, habitat, and species (posterior draws)
+  array[N_years, N_habitats] real richness;
+  array[N_years, N_habitats] real evenness;
+  array[N_years, N_habitats] real hill_N1;
   array[N_years, N_habitats, N_species] int predicted_seed_counts;
 
   for (y in 1:N_years) {
     for (h in 1:N_habitats) {
-      // Expected log-abundance per species for this year–habitat combination
+
+      // Log-scale expected abundance per species
       vector[N_species] log_expected =
         mu_global +
         year_effect * (y == N_years ? 1 : 0) +
@@ -103,54 +100,67 @@ generated quantities {
         species_habitat[, h] +
         (y == N_years ? species_habitat_change[, h] : rep_vector(0, N_species));
 
-      vector[N_species] expected_abund = exp(log_expected);   // back-transform to abundance scale
-      real total_abundance = sum(expected_abund);
-
-      // Generate predicted seed counts from neg_binomial_2 (mean=exp(log_expected), phi)
-      for (s in 1:N_species) {
+      // ── Step 1: Draw predicted counts FIRST ──────────────────────────
+      for (s in 1:N_species)
         predicted_seed_counts[y, h, s] = neg_binomial_2_rng(exp(log_expected[s]), phi);
-      }
 
-      if (total_abundance > 0) {
-        vector[N_species] p = expected_abund / total_abundance;  // relative abundance proportions
+      // ── Step 2: Diversity metrics conditioned on predicted counts ≥ 1 ─
+      // Sum predicted counts across present species for proportion calculation
+      // In the y/h loop, after computing log_expected:
+      vector[N_species] lambda_s = exp(log_expected);
+      vector[N_species] p_present;  // P(count >= 1) per species
 
-        // Species Richness
-        richness[y, h] = 0;
-        for (s in 1:N_species)
-          if (expected_abund[s] >= .25)
-            richness[y, h] += 1;
+      for (s in 1:N_species)
+        p_present[s] = 1.0 - exp(neg_binomial_2_lpmf(0 | lambda_s[s], phi));
 
-        // Compute Shannon’s H', which is used to calculate evenness and diversity
-        vector[N_species] p_present = rep_vector(0.0, N_species);
-        real total_present = 0.0;
+      // Expected richness: sum of presence probabilities (smooth, continuous)
+      real richness_real = sum(p_present);
+      richness[y, h] = richness_real;
 
-        // Restrict to species judged “present” (> 0.5 abundance threshold)
-        for (s in 1:N_species)
-          if (expected_abund[s] > .25) {
-            p_present[s] = p[s];
-            total_present += p[s];
-          }
+      // Soft-weighted abundance: down-weight species unlikely to be present
+      vector[N_species] weighted_abund = p_present .* lambda_s;
+      real total_weighted = sum(weighted_abund);
 
-        // Compute Shannon entropy with present species
+      if (total_weighted > 0) {
+        real thresh = 0.1;  // species present in >10% of hypothetical samples
+
+        real total_thresh = 0.0;
+        int S_int = 0;
         real H_present = 0.0;
-        if (total_present > 0) {
-          p_present = p_present / total_present;
-          for (s in 1:N_species)
-            if (p_present[s] > 1e-12)  // make sure don't take log of zero
-              H_present += -p_present[s] * log(p_present[s]);
+
+        for (s in 1:N_species)
+          if (p_present[s] > thresh)
+            total_thresh += weighted_abund[s];
+
+        for (s in 1:N_species) {
+          if (p_present[s] > thresh) {
+            S_int += 1;
+            if (total_thresh > 0) {
+              real w = weighted_abund[s] / total_thresh;
+              if (w > 1e-12)
+                H_present += -w * log(w);
+            }
+          }
         }
 
+        // Richness: soft expected value for all species (keep as before)
+        richness[y, h] = richness_real;
 
-        // Hill number N1 = exp(H’)
-        hill_N1[y, h] = exp(H_present);
-
-        // Evenness J’ = H’ / log(S)
-        real S = richness[y, h];
-        real H_max = (S > 1) ? log(S) : 0.0;
+        // H_max and evenness now use the same S as H_present
+        real H_max = (S_int > 1) ? log(S_int) : 0.0;
         evenness[y, h] = (H_max > 0) ? H_present / H_max : 0.0;
 
-      } else { // If no abundance predicted, set biodiversity indices to zero
-        richness[y, h] = 0;
+        // Hill N1 can stay soft-weighted (no H_max involved, so no overflow risk)
+        real H_hill = 0.0;
+        for (s in 1:N_species) {
+          real w = weighted_abund[s] / total_weighted;
+          if (w > 1e-12)
+            H_hill += -w * log(w);
+        }
+        hill_N1[y, h] = exp(H_hill);
+
+      } else {
+        richness[y, h] = 0.0;
         evenness[y, h] = 0.0;
         hill_N1[y, h] = 0.0;
       }
