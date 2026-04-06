@@ -1,4 +1,3 @@
-
 librarian::shelf(tidyverse, ggbreak, ggthemes, ggimage, patchwork, ggdist)
 
 # DATA -------------------------------------------------------------------------
@@ -311,26 +310,32 @@ p_xeric <- make_hab_plot(hab_df, "xeric", show_x = TRUE)
   theme(legend.position = "top")
 
 ## Dans Fig 4 version
-left_join(seed_draws, veg_draws, by=join_by(.draw, habitat, USDA_name)) %>%
-  rename(seed_change=value.x, veg_change=value.y) %>%
-  ggplot(aes(x=veg_change, y=seed_change, color=habitat)) +
-  geom_hline(yintercept=0, linetype=2, color="grey") +
-  geom_vline(xintercept=0, linetype=2, color="grey") +
-  geom_point(alpha=.02) +
-  scale_color_manual(values=c("mesic"="green4", "xeric"="tan4"), name="Habitat") +
-  facet_wrap(~USDA_name, nrow=3, scales="free") +
+left_join(seed_draws, veg_draws, by = join_by(.draw, habitat, USDA_name)) %>%
+  rename(seed_change = value.x, veg_change = value.y) %>%
+  ggplot(aes(x = veg_change, y = seed_change, color = habitat)) +
+  geom_hline(yintercept = 0, linetype = 2, color = "grey") +
+  geom_vline(xintercept = 0, linetype = 2, color = "grey") +
+  geom_point(alpha = .02) +
+  scale_color_manual(
+    values = c("mesic" = "green4", "xeric" = "tan4"),
+    name = "Habitat"
+  ) +
+  facet_wrap(~USDA_name, nrow = 3, scales = "free") +
   theme(strip.text = element_text(face = "italic"))
 
 rel_draws %>%
-  ggplot(aes(x=b_seed, fill=habitat)) +
-  stat_slab(alpha=0.5, normalize="groups") +
-  geom_vline(xintercept=0, linetype=2, color="red") +
-  scale_x_continuous(name="Relationship between Seed Change and Veg Change") +
-  scale_fill_manual(values=c("mesic"="green4", "xeric"="tan4"), guide="none") +
-  theme(
-    axis.title.y=element_blank(),
-    axis.text.y=element_blank(),
-    axis.ticks.y=element_blank()
+  ggplot(aes(x = b_seed, fill = habitat)) +
+  stat_slab(alpha = 0.5, normalize = "groups") +
+  geom_vline(xintercept = 0, linetype = 2, color = "red") +
+  scale_x_continuous(name = "Relationship between Seed Change and Veg Change") +
+  scale_fill_manual(
+    values = c("mesic" = "green4", "xeric" = "tan4"),
+    guide = "none"
   ) +
-  facet_wrap(~USDA_name, nrow=3) +
+  theme(
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank()
+  ) +
+  facet_wrap(~USDA_name, nrow = 3) +
   theme(strip.text = element_text(face = "italic"))
