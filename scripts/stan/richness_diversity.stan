@@ -19,14 +19,17 @@ parameters {
   real mu_global;  // global intercept
   real year_effect;        // fixed effect for year (2023 vs. 1989 contrast)
   real habitat_effect;     // fixed effect for habitat (xeric vs. mesic contrast)
-  real year_hab_int;       // fixed year × habitat interaction
+  real year_hab_int;       // fixed year x habitat interaction
   vector[N_plots] plot_effect_raw;             // standardized plot effects
   real<lower=0> sigma_plot;                    // SD of plot effects
   matrix[N_species, N_habitats] species_habitat_raw;        // baseline habitat:species interaction
   matrix[N_species, N_habitats] species_habitat_change_raw; // change in habitat:species interaction across years
   real<lower=0> sigma_species_habitat;         // SD of baseline habitat:species interaction
   real<lower=0> sigma_species_habitat_change;  // SD of change in habitat:species interaction across years
-  real<lower=0> phi;
+  // Species-specific overdispersion (non-centered parameterization)
+  vector[N_species] phi_raw;               // standardized species-level overdispersion
+  real mu_log_phi;                         // mean log overdispersion across species
+  real<lower=0> sigma_log_phi;             // SD of log overdispersion across species
 }
 
 transformed parameters {
@@ -36,7 +39,8 @@ transformed parameters {
   vector[N_plots] plot_effect = sigma_plot * plot_effect_raw;
   matrix[N_species, N_habitats] species_habitat = sigma_species_habitat * species_habitat_raw;
   matrix[N_species, N_habitats] species_habitat_change = sigma_species_habitat_change * species_habitat_change_raw;
-
+  // Species-specific overdispersion on natural scale
+  vector<lower=0>[N_species] phi = exp(mu_log_phi + sigma_log_phi * phi_raw);
 
   // Construct the expected log-abundance for each observation
   for (i in 1:N_obs) {
@@ -70,18 +74,20 @@ model {
   plot_effect_raw ~ std_normal();
   to_vector(species_habitat_raw) ~ std_normal();
   to_vector(species_habitat_change_raw) ~ std_normal();
-  // Overdispersion
-  phi ~ exponential(1);
+  // Species-specific overdispersion priors
+  phi_raw ~ std_normal();
+  mu_log_phi ~ normal(0, 1);       // weakly informative prior on mean log-phi
+  sigma_log_phi ~ normal(0, 0.5);  // partial-pooling SD across species
 
-
-  // Likelihood
-  count ~ neg_binomial_2_log(log_lambda, phi);
+  // Likelihood (species-specific phi indexed by species[i])
+  for (i in 1:N_obs)
+    count[i] ~ neg_binomial_2_log(log_lambda[i], phi[species[i]]);
 }
 
 generated quantities {
   vector[N_obs] log_lambda_gq = log_lambda;
   vector[N_obs] log_lik;
-  for (n in 1:N_obs) log_lik[n] = neg_binomial_2_log_lpmf(count[n] | log_lambda[n], phi);
+  for (n in 1:N_obs) log_lik[n] = neg_binomial_2_log_lpmf(count[n] | log_lambda[n], phi[species[n]]);
 
   array[N_years, N_habitats] real richness;
   array[N_years, N_habitats] real evenness;
@@ -100,18 +106,16 @@ generated quantities {
         species_habitat[, h] +
         (y == N_years ? species_habitat_change[, h] : rep_vector(0, N_species));
 
-      // ── Step 1: Draw predicted counts FIRST ──────────────────────────
+      // Step 1: Draw predicted counts FIRST (using species-specific phi[s])
       for (s in 1:N_species)
-        predicted_seed_counts[y, h, s] = neg_binomial_2_rng(exp(log_expected[s]), phi);
+        predicted_seed_counts[y, h, s] = neg_binomial_2_rng(exp(log_expected[s]), phi[s]);
 
-      // ── Step 2: Diversity metrics conditioned on predicted counts ≥ 1 ─
-      // Sum predicted counts across present species for proportion calculation
-      // In the y/h loop, after computing log_expected:
+      // Step 2: Diversity metrics conditioned on predicted counts >= 1
       vector[N_species] lambda_s = exp(log_expected);
       vector[N_species] p_present;  // P(count >= 1) per species
 
       for (s in 1:N_species)
-        p_present[s] = 1.0 - exp(neg_binomial_2_lpmf(0 | lambda_s[s], phi));
+        p_present[s] = 1.0 - exp(neg_binomial_2_lpmf(0 | lambda_s[s], phi[s]));
 
       // Expected richness: sum of presence probabilities (smooth, continuous)
       real richness_real = sum(p_present);
