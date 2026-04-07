@@ -54,10 +54,10 @@ saddlegrid_df <- data_list$saddptqd.hh.data.csv %>%
     hit_type %in% c("top", "bottom") #middle and extra hits haven't been done across whole time period
   ) %>%
   mutate(USDA_name = sub("\\s*var\\..*$", "", USDA_name)) %>%
-  group_by(year, plot, USDA_code) %>%
+  group_by(year, plot, USDA_code, USDA_name) %>%
   summarize(count = length(hit_type), .groups = "drop") %>%
   complete(plot, USDA_code, year, fill = list(count = 0)) %>% #add records for species not seen in some years
-  group_by(plot, USDA_code) %>%
+  group_by(plot, USDA_code, USDA_name) %>%
   mutate(
     count_scaled = scale(count, center = FALSE)[, 1],
     count_scaled = ifelse(is.na(count_scaled), 0, count_scaled)
@@ -66,8 +66,8 @@ saddlegrid_df <- data_list$saddptqd.hh.data.csv %>%
   merge(saddlegrid_habitat, ., by = "plot") #add habitat information for later use
 
 ## Remove species-habitat combinations that weren't actually present in seed bank data
-### Figure out species present in just mesic seed bank
 spp_to_include <- data_list$seedbank_composition.ac_hh.data %>%
+  mutate(USDA_name = sub("\\s*var\\..*$", "", USDA_name)) %>%
   filter(
     substr(USDA_code, 1, 1) != 2 & USDA_code != "CAREX" & USDA_code != "POA"
   ) %>%
@@ -76,6 +76,7 @@ spp_to_include <- data_list$seedbank_composition.ac_hh.data %>%
   select(USDA_name, habitat) %>%
   rbind(
     data_list$seedbank_composition.ac_hh.data %>%
+      mutate(USDA_name = sub("\\s*var\\..*$", "", USDA_name)) %>%
       filter(
         substr(USDA_code, 1, 1) != 2 & USDA_code != "CAREX" & USDA_code != "POA"
       ) %>%
