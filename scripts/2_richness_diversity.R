@@ -12,16 +12,14 @@ if (!requireNamespace("cmdstanr", quietly = TRUE)) {
   cmdstanr::install_cmdstan() #install cmdstan
 }
 ## Load packages
-librarian::shelf(
-  tidyverse,
-  cmdstanr,
-  tidybayes,
-  bayesplot,
-  posterior,
-  loo,
-  ggdist,
-  patchwork
-)
+library(tidyverse)
+library(cmdstanr)
+library(tidybayes)
+library(bayesplot)
+library(posterior)
+library(loo)
+library(ggdist)
+library(patchwork)
 
 # DATA -------------------------------------------------------------------------
 ## Download
@@ -51,8 +49,6 @@ dlist <- list(
 )
 
 # MODEL ------------------------------------------------------------------------
-options(mc.cores = ifelse(parallel::detectCores() > 4, 4, 2)) #set cores for parallel processing
-
 ## Compile model
 mod2 <- cmdstan_model("scripts/stan/richness_diversity.stan")
 
@@ -61,6 +57,7 @@ mod2 <- cmdstan_model("scripts/stan/richness_diversity.stan")
 fit2 <- mod2$sample(
   data = dlist,
   chains = 4,
+  parallel_chains = ifelse(parallel::detectCores() > 4, 4, 2),
   seed = 11001001
 )
 
@@ -127,7 +124,7 @@ post2_counts <-
   group_by(.draw, year, habitat) %>%
   summarize(scaled_total = sum(scaled_count), .groups = "drop") %>%
   mutate(
-    metric = "Total Seeds Scaled",
+    metric = "Total Seeds",
     year = factor(
       year,
       levels = 1:dlist$N_years,
@@ -162,9 +159,9 @@ post2_indices <-
       metric,
       levels = c("richness", "evenness", "hill_N1"),
       labels = c(
-        "Species Richness",
-        "Pielou's Evenness",
-        "Hill's Diversity Index"
+        "Richness",
+        "Evenness",
+        "Diversity"
       )
     ),
     year = factor(
@@ -185,28 +182,23 @@ post2 <- bind_rows(post2_indices, post2_counts) %>%
     metric = factor(
       metric,
       levels = c(
-        "Total Seeds Scaled",
-        "Species Richness",
-        "Pielou's Evenness",
-        "Hill's Diversity Index"
+        "Total Seeds",
+        "Richness",
+        "Evenness",
+        "Diversity"
       )
     )
   )
 
 ## Fig. 1B: Estimates for each year and habitat
 fig1B <- post2 %>%
-  mutate(
-    y_dots = if_else(metric == "Species Richness", value, NA),
-    y_slab = if_else(metric != "Species Richness", value, NA)
-  ) %>%
   ggplot(aes(x = year)) +
-  #stat_dots(aes(y=y_dots), fill="NA",color="black", linewidth=0.1, normalize="panels") +
   stat_slab(
     aes(y = value),
     fill = "black",
     color = "black",
     linewidth = 0.1,
-    normalize = "panels"
+    normalize = "groups"
   ) +
   facet_grid(metric ~ habitat, scales = "free_y") +
   scale_y_continuous(name = "Estimated Value", limits = c(0, NA))
@@ -217,18 +209,13 @@ fig1C <- post2 %>%
   group_by(.draw, metric, habitat) %>%
   mutate(diff = lead(value) - value, .groups = "drop") %>%
   filter(!is.na(diff)) %>%
-  mutate(
-    y_dots = if_else(metric == "Species Richness", diff, NA),
-    y_slab = if_else(metric != "Species Richness", diff, NA)
-  ) %>%
   ggplot() +
-  #stat_dots(aes(y=y_dots), fill="NA",color="black", linewidth=0.1, normalize="panels") +
   stat_slab(
     aes(y = diff),
     fill = "black",
     color = "black",
     linewidth = 0.1,
-    normalize = "panels"
+    normalize = "groups"
   ) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
   facet_grid(metric ~ habitat, scales = "free_y") +

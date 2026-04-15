@@ -2,7 +2,9 @@
 # Alec Chiono; alec.chiono@colorado.edu
 
 # PACKAGES ---------------------------------------------------------------------
-librarian::shelf(tidyverse, vegan, betapart, indicspecies, flextable, officer)
+library(tidyverse)
+library(vegan)
+library(betapart)
 
 # DATA -------------------------------------------------------------------------
 ## Download
@@ -148,165 +150,174 @@ adonis2(
   by = "terms"
 )
 
-## Plot results
-### Index sets
-idx <- list(
-  "1989 vs. 2023\n(xeric)" = list(
-    which(sc_meta$year == "1989" & sc_meta$habitat == "xeric"),
-    which(sc_meta$year == "2023" & sc_meta$habitat == "xeric")
-  ),
-  "1989 vs. 2023\n(mesic)" = list(
-    which(sc_meta$year == "1989" & sc_meta$habitat == "mesic"),
-    which(sc_meta$year == "2023" & sc_meta$habitat == "mesic")
-  ),
-  "Mesic vs. xeric\n(1989)" = list(
-    which(sc_meta$year == "1989" & sc_meta$habitat == "mesic"),
-    which(sc_meta$year == "1989" & sc_meta$habitat == "xeric")
-  ),
-  "Mesic vs. xeric\n(2023)" = list(
-    which(sc_meta$year == "2023" & sc_meta$habitat == "mesic"),
-    which(sc_meta$year == "2023" & sc_meta$habitat == "xeric")
-  )
+# --- Helper: extract mean dissimilarity between two groups ---
+mean_between <- function(dist_obj, meta, var, group1, group2) {
+  mat <- as.matrix(dist_obj)
+  idx1 <- which(meta[[var]] == group1)
+  idx2 <- which(meta[[var]] == group2)
+  mean(mat[idx1, idx2])
+}
+
+# --- Define your four comparisons ---
+# Adjust variable names and levels to match your actual sc_meta columns
+
+# Subset metadata indices for each year
+meta_1989 <- sc_meta %>% mutate(.idx = row_number()) %>% filter(year == 1989)
+meta_2023 <- sc_meta %>% mutate(.idx = row_number()) %>% filter(year == 2023)
+
+# Helper for subsetting a dist to specific indices then taking between-group mean
+mean_between_sub <- function(dist_obj, meta_sub, var, g1, g2) {
+  mat <- as.matrix(dist_obj)[meta_sub$.idx, meta_sub$.idx]
+  idx1 <- which(meta_sub[[var]] == g1)
+  idx2 <- which(meta_sub[[var]] == g2)
+  mean(mat[idx1, idx2])
+}
+
+comparisons <- tribble(
+  ~group    , ~label                    , ~year_filter ,
+  "Habitat" , "Mesic vs. xeric\n(1989)" ,         1989 ,
+  "Habitat" , "Mesic vs. xeric\n(2023)" ,         2023 ,
+  "Year"    , "1989 vs. 2023\n(xeric)"  , NA           ,
+  "Year"    , "1989 vs. 2023\n(mesic)"  , NA
 )
 
-### Extract matrices
-bal_mat <- as.matrix(beta_abund$beta.bray.bal)
-gra_mat <- as.matrix(beta_abund$beta.bray.gra)
-
-# Build plot data
-plot_data <- imap_dfr(
-  idx,
-  ~ tibble(
-    comparison = .y,
-    `Species replacement` = mean(bal_mat[.x[[1]], .x[[2]]]),
-    `Abundance gradient` = mean(gra_mat[.x[[1]], .x[[2]]])
+# Build results manually for each comparison
+results <- bind_rows(
+  # Habitat comparisons (within year)
+  tibble(
+    group = "Habitat",
+    label = "Mesic vs. xeric\n(1989)",
+    component = c("Species replacement", "Abundance gradient"),
+    value = c(
+      mean_between_sub(
+        beta_abund$beta.bray.bal,
+        sc_meta %>% mutate(.idx = row_number()) %>% filter(year == 1989),
+        "habitat",
+        "mesic",
+        "xeric"
+      ),
+      mean_between_sub(
+        beta_abund$beta.bray.gra,
+        sc_meta %>% mutate(.idx = row_number()) %>% filter(year == 1989),
+        "habitat",
+        "mesic",
+        "xeric"
+      )
+    )
+  ),
+  tibble(
+    group = "Habitat",
+    label = "Mesic vs. xeric\n(2023)",
+    component = c("Species replacement", "Abundance gradient"),
+    value = c(
+      mean_between_sub(
+        beta_abund$beta.bray.bal,
+        sc_meta %>% mutate(.idx = row_number()) %>% filter(year == 2023),
+        "habitat",
+        "mesic",
+        "xeric"
+      ),
+      mean_between_sub(
+        beta_abund$beta.bray.gra,
+        sc_meta %>% mutate(.idx = row_number()) %>% filter(year == 2023),
+        "habitat",
+        "mesic",
+        "xeric"
+      )
+    )
+  ),
+  # Year comparisons (within habitat)
+  tibble(
+    group = "Year",
+    label = "1989 vs. 2023\n(xeric)",
+    component = c("Species replacement", "Abundance gradient"),
+    value = c(
+      mean_between(
+        beta_abund$beta.bray.bal,
+        sc_meta %>% filter(habitat == "xeric"),
+        "year",
+        1989,
+        2023
+      ),
+      mean_between(
+        beta_abund$beta.bray.gra,
+        sc_meta %>% filter(habitat == "xeric"),
+        "year",
+        1989,
+        2023
+      )
+    )
+  ),
+  tibble(
+    group = "Year",
+    label = "1989 vs. 2023\n(mesic)",
+    component = c("Species replacement", "Abundance gradient"),
+    value = c(
+      mean_between(
+        beta_abund$beta.bray.bal,
+        sc_meta %>% filter(habitat == "mesic"),
+        "year",
+        1989,
+        2023
+      ),
+      mean_between(
+        beta_abund$beta.bray.gra,
+        sc_meta %>% filter(habitat == "mesic"),
+        "year",
+        1989,
+        2023
+      )
+    )
   )
 ) %>%
-  pivot_longer(
-    -comparison,
-    names_to = "component",
-    values_to = "dissimilarity"
-  ) %>%
   mutate(
+    group = factor(group, levels = c("Habitat", "Year")),
+    label = factor(
+      label,
+      levels = c(
+        "Mesic vs. xeric\n(1989)",
+        "Mesic vs. xeric\n(2023)",
+        "1989 vs. 2023\n(xeric)",
+        "1989 vs. 2023\n(mesic)"
+      )
+    ),
     component = factor(
       component,
       levels = c("Species replacement", "Abundance gradient")
-    ),
-    comparison = factor(comparison, levels = names(idx)),
-    comparison_type = ifelse(
-      grepl("vs\\. 2023|vs\\. 1989", comparison),
-      "Year",
-      "Habitat"
     )
   )
 
-# Plot
-figS1 <- ggplot(
-  plot_data,
-  aes(x = comparison, y = dissimilarity, fill = component)
-) +
-  geom_col(width = 0.6, color = "white", linewidth = 0.3) +
+# --- Plot ---
+figS1 <- ggplot(results, aes(x = label, y = value, fill = component)) +
+  geom_col(width = 0.6) +
+  facet_grid(~group, scales = "free_x", space = "free_x") +
   scale_fill_manual(
     values = c(
-      "Species replacement" = "gray30",
-      "Abundance gradient" = "gray75"
+      "Species replacement" = "#4E9AC7", # adjust to match your palette
+      "Abundance gradient" = "#F4A460"
     ),
     name = NULL
   ) +
-  facet_grid(~comparison_type, scales = "free_x", space = "free_x") +
-  labs(x = NULL, y = "Mean pairwise dissimilarity (Bray-Curtis)") +
-  theme(legend.position = "top")
+  scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
+  labs(
+    x = NULL,
+    y = "Mean pairwise dissimilarity (Bray–Curtis)"
+  ) +
+  theme_bw(base_size = 13) +
+  theme(
+    legend.position = "top",
+    strip.background = element_rect(fill = "grey90"),
+    strip.text = element_text(face = "bold"),
+    panel.grid.major.x = element_blank(),
+    axis.text.x = element_text(size = 10)
+  )
 
-ggsave("figures/figS1.pdf", figS1, width = 6, height = 4.5, dpi = 300)
-
-# INDICATOR SPECIES ANALYSIS ---------------------------------------------------
-## Create a combined grouping variable for year x habitat combinations
-sc_meta <- sc_meta %>%
-  mutate(year_habitat = interaction(year, habitat, sep = "_"))
-
-## Run indicator species analysis
-## Using the abundance matrix (not presence/absence)
-indval_result <- multipatt(
-  sc_matrix,
-  cluster = sc_meta$year_habitat,
-  func = "IndVal.g", # corrected IndVal
-  control = how(nperm = 999, blocks = sc_meta$plot)
+ggsave(
+  "figures/figS1.pdf",
+  figS1,
+  width = 5,
+  height = 5,
+  units = "in",
+  dpi = 600,
+  bg = "white"
 )
-
-summary(indval_result, indvalcomp = TRUE, alpha = 0.05)
-
-## Write results to formatted tables
-### Format p-values
-indval_formatted <- indval_result$sign %>%
-  rownames_to_column("species_code") %>%
-  filter(p.value <= 0.05) %>%
-  mutate(
-    # Identify which group(s) the species is associated with
-    group = case_when(
-      `s.1989_mesic` == 1 &
-        `s.2023_mesic` == 0 &
-        `s.1989_xeric` == 0 &
-        `s.2023_xeric` == 0 ~ "1989 — mesic only",
-      `s.1989_xeric` == 1 &
-        `s.2023_xeric` == 0 &
-        `s.1989_mesic` == 0 &
-        `s.2023_mesic` == 0 ~ "1989 — xeric only",
-      `s.1989_mesic` == 1 &
-        `s.1989_xeric` == 1 &
-        `s.2023_mesic` == 0 &
-        `s.2023_xeric` == 0 ~ "1989 — both habitats",
-      `s.2023_mesic` == 1 &
-        `s.2023_xeric` == 0 &
-        `s.1989_mesic` == 0 &
-        `s.1989_xeric` == 0 ~ "2023 — mesic only",
-      `s.2023_xeric` == 1 &
-        `s.2023_mesic` == 0 &
-        `s.1989_mesic` == 0 &
-        `s.1989_xeric` == 0 ~ "2023 — xeric only",
-      `s.2023_mesic` == 1 &
-        `s.2023_xeric` == 1 &
-        `s.1989_mesic` == 0 &
-        `s.1989_xeric` == 0 ~ "2023 — both habitats",
-      TRUE ~ "multiple groups"
-    ),
-    # Round numeric columns
-    stat = round(stat, 3),
-    p.value = round(p.value, 3)
-  ) %>%
-  # Join species names if you have a lookup table
-  # left_join(species_lookup, by = "species_code") %>%
-  select(species_code, group, stat, p.value) %>%
-  arrange(group, desc(stat)) %>%
-  rename(
-    "Species code" = species_code,
-    "Group" = group,
-    "IndVal.g" = stat,
-    "p" = p.value
-  ) %>%
-  mutate(p = ifelse(p <= 0.001, "< 0.001", as.character(p)))
-
-### Build flextable
-ft <- flextable(indval_formatted) %>%
-  # Italic species names if you have binomial names in the table
-  italic(j = "Species code") %>%
-  # Bold header
-  bold(part = "header") %>%
-  # Add horizontal lines to separate groups
-  hline(i = which(diff(as.numeric(factor(indval_formatted$Group))) != 0)) %>%
-  # Column widths
-  width(j = "Species code", width = 1.5) %>%
-  width(j = "Group", width = 2.0) %>%
-  width(j = "IndVal.g", width = 0.8) %>%
-  width(j = "p", width = 0.6) %>%
-  # Align numeric columns
-  align(j = c("IndVal.g", "p"), align = "center", part = "all") %>%
-  # Add caption
-  set_caption(
-    "Table S3. Indicator species analysis results. Species significantly associated
-              (p ≤ 0.05) with each year–habitat combination based on IndVal.g (Cáceres & Legendre 2009).
-              IndVal.g ranges from 0 to 1, where higher values indicate stronger association."
-  ) %>%
-  theme_booktabs()
-
-### Save to Word
-save_as_docx(ft, path = "tables/tableS3.docx")

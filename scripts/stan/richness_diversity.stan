@@ -84,90 +84,74 @@ model {
     count[i] ~ neg_binomial_2_log(log_lambda[i], phi[species[i]]);
 }
 
-generated quantities {
-  vector[N_obs] log_lambda_gq = log_lambda;
-  vector[N_obs] log_lik;
-  for (n in 1:N_obs) log_lik[n] = neg_binomial_2_log_lpmf(count[n] | log_lambda[n], phi[species[n]]);
 
-  array[N_years, N_habitats] real richness;
-  array[N_years, N_habitats] real evenness;
-  array[N_years, N_habitats] real hill_N1;
+generated quantities {
+  // --- Pointwise log-likelihood for LOO/WAIC ---
+  vector[N_obs] log_lik;
+  for (n in 1:N_obs)
+    log_lik[n] = neg_binomial_2_log_lpmf(count[n] | log_lambda[n], phi[species[n]]);
+
+  // --- Posterior predictive draws (year x habitat x species) ---
+  // Plot effects are marginalized out; these represent community-level predictions.
   array[N_years, N_habitats, N_species] int predicted_seed_counts;
+
+  // --- Biodiversity indices (year x habitat) ---
+  array[N_years, N_habitats] real richness;   // expected species richness
+  array[N_years, N_habitats] real hill_N1;    // Hill number N1 (Shannon effective species)
+  array[N_years, N_habitats] real evenness;   // Pielou's J
 
   for (y in 1:N_years) {
     for (h in 1:N_habitats) {
 
-      // Log-scale expected abundance per species
+      // Expected log-abundance per species, marginalizing over plot effects.
+      // Plot effects average to zero by construction (mean-zero normal prior),
+      // so omitting them here gives the marginal community-level expectation.
       vector[N_species] log_expected =
         mu_global +
-        year_effect * (y == N_years ? 1 : 0) +
-        habitat_effect * (h == 2 ? 1 : 0) +
-        year_hab_int * (y == N_years ? 1 : 0) * (h == 2 ? 1 : 0) +
+        year_effect    * (y == N_years ? 1 : 0) +
+        habitat_effect * (h == 2       ? 1 : 0) +
+        year_hab_int   * (y == N_years ? 1 : 0) * (h == 2 ? 1 : 0) +
         species_habitat[, h] +
         (y == N_years ? species_habitat_change[, h] : rep_vector(0, N_species));
 
-      // Step 1: Draw predicted counts FIRST (using species-specific phi[s])
-      for (s in 1:N_species)
-        predicted_seed_counts[y, h, s] = neg_binomial_2_rng(exp(log_expected[s]), phi[s]);
-
-      // Step 2: Diversity metrics conditioned on predicted counts >= 1
       vector[N_species] lambda_s = exp(log_expected);
-      vector[N_species] p_present;  // P(count >= 1) per species
 
+      // --- Posterior predictive draws (for model checking and raw count summaries) ---
+      for (s in 1:N_species)
+        predicted_seed_counts[y, h, s] = neg_binomial_2_rng(lambda_s[s], phi[s]);
+
+      // --- Expected species richness (analytical) ---
+      // E[S] = sum_s P(Y_s > 0) = sum_s [1 - P(Y_s = 0)].
+      // Derived from the NB pmf, so overdispersion (phi) is factored in:
+      // a highly overdispersed species with a given lambda contributes less
+      // to expected richness than a species with the same lambda but lower overdispersion.
+      vector[N_species] p_present;
       for (s in 1:N_species)
         p_present[s] = 1.0 - exp(neg_binomial_2_lpmf(0 | lambda_s[s], phi[s]));
+      richness[y, h] = sum(p_present);
 
-      // Expected richness: sum of presence probabilities (smooth, continuous)
-      real richness_real = sum(p_present);
-      richness[y, h] = richness_real;
-
-      // Soft-weighted abundance: down-weight species unlikely to be present
-      vector[N_species] weighted_abund = p_present .* lambda_s;
-      real total_weighted = sum(weighted_abund);
-
-      if (total_weighted > 0) {
-        real thresh = 0.1;  // species present in >10% of hypothetical samples
-
-        real total_thresh = 0.0;
-        int S_int = 0;
-        real H_present = 0.0;
-
-        for (s in 1:N_species)
-          if (p_present[s] > thresh)
-            total_thresh += weighted_abund[s];
-
-        for (s in 1:N_species) {
-          if (p_present[s] > thresh) {
-            S_int += 1;
-            if (total_thresh > 0) {
-              real w = weighted_abund[s] / total_thresh;
-              if (w > 1e-12)
-                H_present += -w * log(w);
-            }
-          }
-        }
-
-        // Richness: soft expected value for all species (keep as before)
-        richness[y, h] = richness_real;
-
-        // H_max and evenness now use the same S as H_present
-        real H_max = (S_int > 1) ? log(S_int) : 0.0;
-        evenness[y, h] = (H_max > 0) ? H_present / H_max : 0.0;
-
-        // Hill N1 can stay soft-weighted (no H_max involved, so no overflow risk)
-        real H_hill = 0.0;
-        for (s in 1:N_species) {
-          real w = weighted_abund[s] / total_weighted;
-          if (w > 1e-12)
-            H_hill += -w * log(w);
-        }
-        hill_N1[y, h] = exp(H_hill);
-
-      } else {
-        richness[y, h] = 0.0;
-        evenness[y, h] = 0.0;
-        hill_N1[y, h] = 0.0;
+      // --- Shannon entropy and Hill N1 (analytical) ---
+      // H is computed from expected proportional abundances p_s = lambda_s / sum(lambda_s)
+      // over all N_species. Using continuous lambda_s rather than integer predictive draws
+      // avoids discretization artifacts (jagged posteriors) in H and Hill N1.
+      // H is bounded above by log(N_species), so the evenness denominator uses
+      // log(N_species) to guarantee J in [0, 1].
+      real total_lambda = sum(lambda_s);
+      real H = 0.0;
+      for (s in 1:N_species) {
+        real p = lambda_s[s] / total_lambda;
+        if (p > 1e-15)
+          H -= p * log(p);
       }
+
+      // Hill N1: effective number of equally-abundant species on the Shannon scale.
+      hill_N1[y, h] = exp(H);
+
+      // Pielou's J: entropy relative to the maximum possible given the species pool.
+      // Denominator is log(N_species) — the upper bound of H — ensuring J in [0, 1].
+      // Interpretation: J = 1 when all species in the pool are equally abundant;
+      // J = 0 when a single species dominates entirely.
+      evenness[y, h] = (N_species > 1) ? H / log(N_species) : 0.0;
     }
   }
 }
