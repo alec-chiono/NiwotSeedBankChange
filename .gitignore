@@ -23,8 +23,8 @@
 air.toml
 
 # ── Stan: Ignore compiled executables, keep .stan source files ───────────────
-scripts/stan/*
-!scripts/stan/*.stan
+scripts/stan_models/*
+!scripts/stan_models/*.stan
 
 # ── macOS System Files ────────────────────────────────────────────────────────
 .DS_Store
