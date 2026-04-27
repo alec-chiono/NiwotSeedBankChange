@@ -18,6 +18,10 @@
 *.utf8.md
 *.knit.md
 
+# ── Positron ─────────────────────────────────────────────────────────────────
+.vscode/
+air.toml
+
 # ── Stan: Ignore compiled executables, keep .stan source files ───────────────
 scripts/stan/*
 !scripts/stan/*.stan
