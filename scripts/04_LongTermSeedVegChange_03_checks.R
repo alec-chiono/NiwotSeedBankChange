@@ -68,7 +68,7 @@ ppc4D <- ppc_stat_grouped(
 
 ppc4 <- (ppc4A + ppc4B) / (ppc4C + ppc4D) + plot_annotation(tag_level = "A")
 ggsave(
-  "figures/figS5.pdf",
+  "figures/figS2.pdf",
   ppc4,
   width = 10,
   height = 10,

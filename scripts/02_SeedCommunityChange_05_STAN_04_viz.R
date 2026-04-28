@@ -135,7 +135,7 @@ fig2C <- post2 %>%
 
 ## Get ggplot obj for Fig. 2A
 suppressMessages(capture.output(
-  source("scripts/analysis/02_SeedCommunityChange_04_RDA.R"),
+  source("scripts/02_SeedCommunityChange_04_RDA.R"),
   file = nullfile()
 ))
 
@@ -144,7 +144,7 @@ fig2 <- fig2A / (fig2B + fig2C) + plot_annotation(tag_levels = 'A')
 
 ## Write Figure 2
 ggsave(
-  "figures/fig2.pdf",
+  "figures/Figure2.pdf",
   fig2,
   width = 7.5,
   height = 10,

@@ -58,7 +58,7 @@ fig3 <- sv_scores %>%
 
 # Write Figure 2
 ggsave(
-  "figures/fig3.pdf",
+  "figures/Figure3.pdf",
   fig3,
   width = 7.5,
   height = 5,

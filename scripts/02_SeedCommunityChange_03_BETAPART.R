@@ -174,7 +174,7 @@ results <- bind_rows(
   )
 
 # --- Plot ---
-figS1 <- ggplot(results, aes(x = label, y = value, fill = component)) +
+figS4 <- ggplot(results, aes(x = label, y = value, fill = component)) +
   geom_col(width = 0.6) +
   facet_grid(~group, scales = "free_x", space = "free_x") +
   scale_fill_manual(
@@ -199,8 +199,8 @@ figS1 <- ggplot(results, aes(x = label, y = value, fill = component)) +
   )
 
 ggsave(
-  "figures/figS1.pdf",
-  figS1,
+  "figures/FigureS4.pdf",
+  figS4,
   width = 5,
   height = 5,
   units = "in",

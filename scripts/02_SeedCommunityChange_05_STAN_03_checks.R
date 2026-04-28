@@ -59,7 +59,7 @@ ppc2 <- ppc2A /
   plot_annotation(tag_levels = "A")
 
 ggsave(
-  "figures/figS4.pdf",
+  "figures/figS1.pdf",
   ppc2,
   width = 10,
   height = 10,

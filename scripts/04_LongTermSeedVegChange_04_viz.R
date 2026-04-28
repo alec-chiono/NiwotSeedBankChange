@@ -166,7 +166,7 @@ fig4 <- ((fig4A + fig4B + plot_layout(axes = "collect")) / fig4C) +
   plot_layout(guides = "collect")
 
 ggsave(
-  "figures/fig4.pdf",
+  "figures/Figure4.pdf",
   fig4,
   width = 7.5,
   height = 5,
