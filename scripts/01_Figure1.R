@@ -180,4 +180,4 @@ p_leg <- ggplot() +
 
 fig1 <- p_leg / p_main + plot_layout(heights = c(0.12, 1))
 
-ggsave("figures/barplot.png", fig1, width = 10, height = 5, dpi = 600)
+ggsave("figures/Figure1.pdf", fig1, width = 10, height = 5, dpi = 600)

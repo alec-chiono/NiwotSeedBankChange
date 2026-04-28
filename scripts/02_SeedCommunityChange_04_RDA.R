@@ -48,7 +48,7 @@ sc_scores <- sc_meta %>%
   cbind(scores(sc_rda)$sites)
 
 ## Fig. 1A: Just sample scores
-fig1A <- sc_scores %>%
+fig2A <- sc_scores %>%
   mutate(habitat_depth = paste(habitat, depth, sep = "_")) %>%
   ggplot(aes(x = RDA1, y = RDA2)) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray70") +

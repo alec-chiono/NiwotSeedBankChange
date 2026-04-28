@@ -101,7 +101,7 @@ spp_order <- seed_draws %>%
   as.character()
 
 # Fig. 3A: Posteriors of predicted seed change
-fig3A <- seed_draws %>%
+fig4A <- seed_draws %>%
   mutate(USDA_name = factor(as.character(USDA_name), levels = spp_order)) %>%
   ggplot(aes(x = value, y = fct_rev(USDA_name), fill = habitat)) +
   geom_hline(
@@ -124,7 +124,7 @@ fig3A <- seed_draws %>%
   theme(axis.text.y = element_text(face = "italic"))
 
 # Fig. 3A: Posteriors of predicted veg change
-fig3B <- veg_draws %>%
+fig4B <- veg_draws %>%
   mutate(USDA_name = factor(as.character(USDA_name), levels = spp_order)) %>%
   ggplot(aes(x = value, y = fct_rev(USDA_name), fill = habitat)) +
   geom_hline(
@@ -144,7 +144,7 @@ fig3B <- veg_draws %>%
   theme(axis.text.y = element_text(face = "italic"))
 
 # Fig. 3A: Posteriors of relationship between seed and veg change
-fig3C <- rel_draws %>%
+fig4C <- rel_draws %>%
   ggplot(aes(x = b_seed, fill = habitat)) +
   stat_slab(alpha = 0.5, normalize = "groups") +
   geom_vline(xintercept = 0, linetype = 2, color = "red") +
@@ -162,12 +162,12 @@ fig3C <- rel_draws %>%
     axis.ticks.y = element_blank()
   )
 
-fig3 <- ((fig3A + fig3B + plot_layout(axes = "collect")) / fig3C) +
+fig4 <- ((fig4A + fig4B + plot_layout(axes = "collect")) / fig4C) +
   plot_layout(guides = "collect")
 
 ggsave(
-  "figures/fig3.pdf",
-  fig3,
+  "figures/fig4.pdf",
+  fig4,
   width = 7.5,
   height = 5,
   units = "in",

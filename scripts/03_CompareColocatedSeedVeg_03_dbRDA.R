@@ -46,8 +46,8 @@ theme_set(
 sv_scores <- sv_meta %>%
   cbind(scores(sv_rda)$sites)
 
-# Fig. 2: dbRDA comparing seed bank and veg community from same locations
-fig2 <- sv_scores %>%
+# Fig. 3: dbRDA comparing seed bank and veg community from same locations
+fig3 <- sv_scores %>%
   ggplot(aes(x = dbRDA1, y = dbRDA2)) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray70") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray70") +
@@ -58,8 +58,8 @@ fig2 <- sv_scores %>%
 
 # Write Figure 2
 ggsave(
-  "figures/fig2.pdf",
-  fig2,
+  "figures/fig3.pdf",
+  fig3,
   width = 7.5,
   height = 5,
   units = "in",

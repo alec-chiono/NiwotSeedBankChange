@@ -97,8 +97,8 @@ theme_set(
   ggthemes::theme_tufte() + theme(panel.border = element_rect(fill = NA))
 )
 
-## Fig. 1B: Estimates for each year and habitat
-fig1B <- post2 %>%
+## Fig. 2B: Estimates for each year and habitat
+fig2B <- post2 %>%
   ggplot(aes(x = year)) +
   stat_slab(
     aes(y = value),
@@ -110,8 +110,8 @@ fig1B <- post2 %>%
   facet_grid(metric ~ habitat, scales = "free_y") +
   scale_y_continuous(name = "Estimated Value", limits = c(0, NA))
 
-## Fig. 1C Estimates for change in indices over time
-fig1C <- post2 %>%
+## Fig. 2C Estimates for change in indices over time
+fig2C <- post2 %>%
   arrange(.draw, metric, habitat, year) %>%
   group_by(.draw, metric, habitat) %>%
   mutate(diff = lead(value) - value, .groups = "drop") %>%
@@ -133,19 +133,19 @@ fig1C <- post2 %>%
     axis.ticks.x = element_blank()
   )
 
-## Get ggplot obj for Fig. 1A
+## Get ggplot obj for Fig. 2A
 suppressMessages(capture.output(
   source("scripts/analysis/02_SeedCommunityChange_04_RDA.R"),
   file = nullfile()
 ))
 
 ## Collate Figure 1
-fig1 <- fig1A / (fig1B + fig1C) + plot_annotation(tag_levels = 'A')
+fig2 <- fig2A / (fig2B + fig2C) + plot_annotation(tag_levels = 'A')
 
-## Write Figure 1
+## Write Figure 2
 ggsave(
-  "figures/fig1.pdf",
-  fig1,
+  "figures/fig2.pdf",
+  fig2,
   width = 7.5,
   height = 10,
   units = "in",
