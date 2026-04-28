@@ -9,7 +9,7 @@ library(patchwork)
 
 # DATA ----
 # Source data download function
-source("scripts/source/download_data.R")
+source("scripts/00_DownloadData.R")
 
 # Download and wrangle data
 seed_count_df <-

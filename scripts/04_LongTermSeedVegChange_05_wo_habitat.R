@@ -18,11 +18,13 @@ library(patchwork)
 library(tidybayes)
 library(ggdist)
 
+# DATA ----
+source("scripts/04_LongTermSeedVegChange_01_prep.R")
 
 # MODEL ----
 # Compile
 mod4_wo_habitat <- cmdstan_model(
-  "scripts/stan/compare_seed_veg_change_wo_habitat.stan"
+  "scripts/stan_models/compare_seed_veg_change_wo_habitat.stan"
 )
 
 # Fit

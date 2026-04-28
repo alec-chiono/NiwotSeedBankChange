@@ -5,7 +5,7 @@
 library(vegan)
 
 # DATA ----
-source("scripts/analysis/02_SeedCommunityChange_01_prep.R")
+source("scripts/02_SeedCommunityChange_01_prep.R")
 
 # DCA ----
 # to determine if we should do RDA or CCA

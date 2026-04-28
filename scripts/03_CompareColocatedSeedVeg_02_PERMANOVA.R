@@ -5,7 +5,7 @@
 library(vegan)
 
 # DATA ----
-source("scripts/analysis/03_01_CompareColocatedSeedVeg_prep.R")
+source("scripts/03_CompareColocatedSeedVeg_01_prep.R")
 
 # Aggregate presence/absence data for soil samples for each plot so blocking design does not invalidate PERMANOVA
 sv_df_agg <- sv_df %>%

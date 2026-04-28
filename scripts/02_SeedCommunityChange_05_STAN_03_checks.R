@@ -8,7 +8,7 @@ library(loo)
 library(patchwork)
 
 # MODEL ----
-source("scripts/analysis/02_SeedCommunityChange_05_STAN_02_fit.R")
+source("scripts/02_SeedCommunityChange_05_STAN_02_fit.R")
 
 # DIAGNOSTICS ----
 ## cmdstanr doesn't automatically warn you when there are Rhat issues

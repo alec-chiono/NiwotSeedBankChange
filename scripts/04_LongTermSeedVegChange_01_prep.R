@@ -6,11 +6,14 @@ library(tidyverse)
 
 # DATA ----
 # Source data download function
-source("scripts/source/download_data.R")
+source("scripts/00_DownloadData.R")
+
 # Download long-term seed and veg data
 data_list <- download_data(seed = TRUE, longterm_veg = TRUE)
+
 # Load categorizations of long-term veg plots into mesic or xerix dry meadow
 saddlegrid_habitat <- read.csv("data/saddptqd_xericmesic_categorization.csv")
+
 # Wrangle seed bank data
 seedbank_df <- data_list$seedbank_composition.ac_hh.data %>%
   select(year:USDA_name, count) %>% #select relevant columns

@@ -7,7 +7,7 @@ library(ggdist)
 library(patchwork)
 
 # MODEL ----
-source("scripts/analysis/02_SeedCommunityChange_05_STAN_02_fit.R")
+source("scripts/02_SeedCommunityChange_05_STAN_02_fit.R")
 
 # POSTERIOR PREDICTIONS ----
 # Retrieve posteriors for seed counts

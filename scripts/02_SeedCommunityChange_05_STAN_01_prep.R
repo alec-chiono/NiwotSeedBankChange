@@ -6,7 +6,7 @@ library(tidyverse)
 
 # DATA ----
 # Source data download function
-source("scripts/source/download_data.R")
+source("scripts/00_DownloadData.R")
 
 # Download and wrangle data
 seedbank_df <- download_data(seed = TRUE)$seedbank_composition.ac_hh.data %>%

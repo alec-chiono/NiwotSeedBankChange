@@ -1,4 +1,4 @@
-# Fit Bayesian model evaluating relationship between long-term above-ground vegetation changes and seed bank changes
+# Fit Bayesian model for estimating richness, evenness, and diversity
 # Alec Chiono; alec.chiono@colorado.edu
 
 # PACKAGES ----
@@ -14,19 +14,17 @@ if (!requireNamespace("cmdstanr", quietly = TRUE)) {
 library(cmdstanr)
 
 # DATA ----
-source("scripts/analysis/04_LongTermSeedVegChange_01_prep.R")
+source("scripts/02_SeedCommunityChange_05_STAN_01_prep.R")
 
 # MODEL ----
 # Compile
-mod4 <- cmdstan_model("scripts/stan_models/compare_seed_veg_change.stan")
+mod2 <- cmdstan_model("scripts/stan_models/richness_diversity.stan")
 
 # Fit
 ## may get warnings as model starts sampling at extreme values but fit is fine
-fit4 <- mod4$sample(
+fit2 <- mod2$sample(
   data = dlist,
   chains = 4,
   parallel_chains = ifelse(parallel::detectCores() > 4, 4, 2),
-  seed = 5336,
-  adapt_delta = 0.99,
-  max_treedepth = 15
+  seed = 11001001
 )

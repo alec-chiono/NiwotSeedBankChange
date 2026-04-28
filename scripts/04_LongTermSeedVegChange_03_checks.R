@@ -7,7 +7,7 @@ library(posterior)
 library(patchwork)
 
 # MODEL ----
-source("scripts/analysis/04_LongTermSeedVegChange_02_fit.R")
+source("scripts/04_LongTermSeedVegChange_02_fit.R")
 
 # DIAGNOSTICS ----
 ## cmdstanr doesn't automatically warn you when there are Rhat issues

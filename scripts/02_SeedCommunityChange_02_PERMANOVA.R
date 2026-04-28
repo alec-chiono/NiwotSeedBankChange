@@ -5,7 +5,7 @@
 library(vegan)
 
 # DATA ----
-source("scripts/analysis/02_01_SeedCommunityChange_prep.R")
+source("scripts/02_SeedCommunityChange_01_prep.R")
 
 # Calculate Bray-Curtis distance matrix
 bc_dist <- vegdist(sc_matrix, method = "bray")

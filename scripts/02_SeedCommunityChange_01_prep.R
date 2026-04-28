@@ -6,7 +6,7 @@ library(tidyverse)
 
 # DATA ----
 # Source data download function
-source("scripts/source/download_data.R")
+source("scripts/00_DownloadData.R")
 
 # Download and wrangle data
 sc_df <-

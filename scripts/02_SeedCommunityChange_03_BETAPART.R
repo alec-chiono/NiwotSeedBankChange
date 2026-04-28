@@ -6,7 +6,7 @@ library(vegan)
 library(betapart)
 
 # DATA ----
-source("scripts/analysis/02_SeedCommunityChange_01_prep.R")
+source("scripts/02_SeedCommunityChange_01_prep.R")
 
 # BETAPART DECOMPOSITION ----
 beta_abund <- beta.pair.abund(sc_matrix, index.family = "bray")

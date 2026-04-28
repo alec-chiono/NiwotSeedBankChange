@@ -5,7 +5,7 @@
 library(vegan)
 
 # DATA ----
-source("scripts/analysis/03_01_CompareColocatedSeedVeg_prep.R")
+source("scripts/03_CompareColocatedSeedVeg_01_prep.R")
 
 # Pull out presence/absence data and convert into Jaccard distance matrix
 sv_dist <- sv_df %>%

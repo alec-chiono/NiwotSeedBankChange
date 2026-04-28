@@ -6,7 +6,7 @@ library(tidyverse)
 
 # DATA ----
 # Source data download function
-source("scripts/source/download_data.R")
+source("scripts/00_DownloadData.R")
 
 # Dowload data
 data_list <- download_data(seed = TRUE, coloc_veg = TRUE)
