@@ -1,129 +1,14 @@
-# Compare change in seed bank community composition over time using redundancy analysis (RDA)
+# Evaluate contributions of species replacement and abundance gradient to seed bank community change
 # Alec Chiono; alec.chiono@colorado.edu
 
-# PACKAGES ---------------------------------------------------------------------
-library(tidyverse)
+# PACKAGES ----
 library(vegan)
 library(betapart)
 
-# DATA -------------------------------------------------------------------------
-## Download
-source("scripts/source/download_data.R")
+# DATA ----
+source("scripts/analysis/02_SeedCommunityChange_01_prep.R")
 
-## Wrangle
-sc_df <- data_list$seedbank_composition.ac_hh.data %>%
-  filter(
-    substr(USDA_code, 1, 1) != 2 & USDA_code != "CAREX" & USDA_code != "POA"
-  ) %>% #remove records not identified to species
-  select(year:depth, USDA_name, count) %>% #select relevant columns
-  pivot_wider(names_from = USDA_name, values_from = count) %>% #pivot into proper format for analyses
-  filter(rowSums(across(-(year:depth))) > 0) #remove samples that had no species present
-
-# RDA ---------------------------------------------------------------------
-## Pull out abundance data
-sc_matrix <- sc_df %>%
-  select(-(year:depth)) %>%
-  as.matrix()
-
-## Pull out meta data
-sc_meta <- sc_df %>%
-  select(year:depth) %>%
-  mutate(across(everything(), as.factor)) #pull out just metadata and make year a factor
-
-## DCA to determine if we should do RDA or CCA
-dca <- decorana(sc_matrix)
-print(dca) #DCA1 axis length is 1.003, so will do RDA
-
-## Fit RDA
-sc_rda <- rda(
-  decostand(sc_matrix, method = "hellinger") ~ #Hellinger transformation (https://r.qcbs.ca/workshop09/book-en/transformations.html)
-    year *
-    habitat *
-    depth + #variables of interest
-    Condition(plot), #spatial structure
-  data = sc_meta
-)
-
-## Evaluate model significance
-anova.cca(sc_rda, step = 1000) #check overall significance
-anova.cca(sc_rda, step = 1000, by = "axis") #check axes significance
-anova.cca(
-  sc_rda,
-  step = 1000,
-  by = "margin",
-  scope = c(
-    "year",
-    "habitat",
-    "depth",
-    "year:habitat",
-    "year:depth",
-    "habitat:depth",
-    "year:habitat:depth"
-  )
-) #check which terms significant
-
-## Extract sample scores
-sc_scores <- sc_meta %>%
-  cbind(scores(sc_rda)$sites)
-
-
-# FIGURES ----------------------------------------------------------------------
-## Set plotting theme
-theme_set(
-  ggthemes::theme_tufte() + theme(panel.border = element_rect(fill = NA))
-)
-
-## Fig. 1A: Just sample scores
-fig1A <- sc_scores %>%
-  mutate(habitat_depth = paste(habitat, depth, sep = "_")) %>%
-  ggplot(aes(x = RDA1, y = RDA2)) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "gray70") +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray70") +
-  geom_point(aes(color = year, shape = habitat), size = 5) +
-  scale_shape_manual(values = c(16, 17)) +
-  scale_color_manual(values = c("skyblue3", "red4")) +
-  theme(legend.position = "top")
-
-ggsave(
-  "figures/fig1A.png",
-  fig1A,
-  width = 5,
-  height = 5,
-  units = "in",
-  dpi = 600,
-  bg = "white"
-)
-
-# PERMANOVA --------------------------------------------------------------------
-## Bray-Curtis distance matrix
-bc_dist <- vegdist(sc_matrix, method = "bray")
-
-## Fit PERMANOVA
-adonis2(
-  bc_dist ~
-    year * habitat * depth,
-  data = sc_meta,
-  permutations = how(nperm = 999, blocks = sc_meta$plot),
-  by = "terms"
-)
-
-# BETADISPER -------------------------------------------------------------------
-## Test for homogeneity of multivariate dispersions (i.e., beta diversity)
-
-# Year
-bd_year <- betadisper(bc_dist, group = sc_meta$year)
-permutest(bd_year, permutations = 999)
-
-# Habitat
-bd_habitat <- betadisper(bc_dist, group = sc_meta$habitat)
-permutest(bd_habitat, permutations = 999)
-
-# Depth
-bd_depth <- betadisper(bc_dist, group = sc_meta$depth)
-permutest(bd_depth, permutations = 999)
-
-# BETAPART DECOMPOSITION -------------------------------------------------------
-## Requires raw abundance matrix (not hellinger transformed)
+# BETAPART DECOMPOSITION ----
 beta_abund <- beta.pair.abund(sc_matrix, index.family = "bray")
 
 ## Total
@@ -150,6 +35,7 @@ adonis2(
   by = "terms"
 )
 
+# VIZ ----
 # --- Helper: extract mean dissimilarity between two groups ---
 mean_between <- function(dist_obj, meta, var, group1, group2) {
   mat <- as.matrix(dist_obj)

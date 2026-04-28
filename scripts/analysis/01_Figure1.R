@@ -13,15 +13,17 @@ source("scripts/source/download_data.R")
 
 # Download and wrangle data
 seed_count_df <-
-  download_data(veg = FALSE)[[1]] %>%
-  filter(substr(USDA_code, 1, 1) != 2 & USDA_code != "CAREX" & USDA_code != "POA") %>% #remove records not identified to species
+  download_data(seed = TRUE)$seedbank_composition.ac_hh.data %>%
+  filter(
+    substr(USDA_code, 1, 1) != 2 & USDA_code != "CAREX" & USDA_code != "POA"
+  ) %>% #remove records not identified to species
   group_by(USDA_name, year) %>%
   summarize(sum = sum(count), .groups = "drop") %>%
   mutate(
     Species = sub("\\s*var\\..*$", "", USDA_name),
-    year=factor(year)
+    year = factor(year)
   )
-  
+
 # VIZ ----
 # Growth form icon files
 gram <- "images/graminoid.png"
