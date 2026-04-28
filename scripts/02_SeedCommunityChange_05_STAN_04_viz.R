@@ -146,8 +146,8 @@ fig2 <- fig2A / (fig2B + fig2C) + plot_annotation(tag_levels = 'A')
 ggsave(
   "figures/Figure2.pdf",
   fig2,
-  width = 7.5,
-  height = 10,
-  units = "in",
+  width = 18,
+  height = 22,
+  units = "cm",
   dpi = 600
 )

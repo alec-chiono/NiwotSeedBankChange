@@ -39,7 +39,7 @@ anova.cca(
 # VIZ ----
 # Set plotting theme
 theme_set(
-  ggthemes::theme_tufte() + theme(panel.border = element_rect(fill = NA))
+  +theme()
 )
 
 # Extract scores
@@ -51,18 +51,25 @@ fig3 <- sv_scores %>%
   ggplot(aes(x = dbRDA1, y = dbRDA2)) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray70") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray70") +
-  geom_point(aes(color = community, shape = habitat), size = 5) +
+  geom_point(aes(color = community, shape = habitat), size = 3) +
   scale_shape_manual(values = c(16, 17)) +
   scale_color_manual(values = c("brown4", "green4")) +
-  theme(legend.position = "top")
+  ggthemes::theme_tufte() +
+  theme(
+    panel.border = element_rect(fill = NA),
+    legend.position = "top",
+    text = element_text(size = 8),
+    legend.box.spacing = unit(2, "pt"),
+    legend.margin = margin(0, 0, 0, 0),
+    legend.key.width = unit(1, "pt")
+  )
 
 # Write Figure 2
 ggsave(
   "figures/Figure3.pdf",
   fig3,
-  width = 7.5,
-  height = 5,
-  units = "in",
-  dpi = 600,
-  bg = "white"
+  width = 8.5,
+  height = 8.5,
+  units = "cm",
+  dpi = 600
 )

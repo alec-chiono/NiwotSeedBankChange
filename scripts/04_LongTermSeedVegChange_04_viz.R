@@ -149,7 +149,7 @@ fig4C <- rel_draws %>%
   stat_slab(alpha = 0.5, normalize = "groups") +
   geom_vline(xintercept = 0, linetype = 2, color = "red") +
   scale_x_continuous(
-    name = "Relationship between Seed Change and Veg Change",
+    name = "Relationship between Seed Change and Vegetation Change",
     limits = c(-20, 20)
   ) +
   scale_fill_manual(
@@ -168,8 +168,8 @@ fig4 <- ((fig4A + fig4B + plot_layout(axes = "collect")) / fig4C) +
 ggsave(
   "figures/Figure4.pdf",
   fig4,
-  width = 7.5,
-  height = 5,
-  units = "in",
+  width = 18,
+  height = 12,
+  units = "cm",
   dpi = 600
 )

@@ -60,7 +60,7 @@ symbol_map <- c(
 species_order <-
   seed_count_df %>%
   filter(year == 1989) %>%
-  arrange(sum, desc = TRUE) %>%
+  arrange(desc(sum)) %>%
   pull(Species)
 
 # Data.frame to plot growth form icons under species names
@@ -71,6 +71,9 @@ icon_df <-
     y_icon = -2.2
   ) %>%
   mutate(Species = factor(Species, levels = species_order))
+
+# Theme set
+theme_set(ggthemes::theme_tufte())
 
 # Main bar plot
 p_main <- seed_count_df %>%
@@ -101,7 +104,7 @@ p_main <- seed_count_df %>%
     guide = "none"
   ) +
   scale_y_continuous(
-    name = "# Germinable Seeds",
+    name = "                              # Germinable Seeds",
     expand = expansion(mult = c(0, 0.05), add = c(3.2, 0)),
     #breaks = c(0, 5, 10, 15, 20, 80, 90, 100),
     limits = c(NA, 100)
@@ -112,6 +115,7 @@ p_main <- seed_count_df %>%
   theme_tufte() +
   theme(
     axis.text.x = element_text(
+      size = 8,
       angle = 52,
       hjust = 1,
       vjust = 1,
@@ -149,7 +153,7 @@ p_leg <- ggplot() +
   geom_tile(
     data = year_leg,
     aes(x = x, y = y, fill = fill),
-    width = 0.3,
+    width = 0.2,
     height = 0.20,
     show.legend = FALSE
   ) +
@@ -157,7 +161,7 @@ p_leg <- ggplot() +
     data = year_leg,
     aes(x = x + 0.2, y = y, label = lab),
     hjust = 0,
-    size = 4.5,
+    size = 4,
     family = "serif"
   ) +
   geom_image(
@@ -171,7 +175,7 @@ p_leg <- ggplot() +
     data = gf_leg,
     aes(x = x + 0.3, y = y, label = lab),
     hjust = 0,
-    size = 4.5,
+    size = 4,
     family = "serif"
   ) +
   scale_fill_manual(values = c("1989" = "skyblue3", "2023" = "red4")) +
@@ -180,4 +184,11 @@ p_leg <- ggplot() +
 
 fig1 <- p_leg / p_main + plot_layout(heights = c(0.12, 1))
 
-ggsave("figures/Figure1.pdf", fig1, width = 10, height = 5, dpi = 600)
+ggsave(
+  "figures/Figure1.pdf",
+  fig1,
+  width = 18,
+  height = 9,
+  units = "cm",
+  dpi = 600
+)
