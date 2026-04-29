@@ -24,7 +24,7 @@ source("scripts/04_LongTermSeedVegChange_01_prep.R")
 # MODEL ----
 # Compile
 mod4_wo_habitat <- cmdstan_model(
-  "scripts/stan_models/compare_seed_veg_change_wo_habitat.stan"
+  "scripts/stan_models/longterm_change_wo_habitat.stan"
 )
 
 # Fit

@@ -18,7 +18,7 @@ source("scripts/04_LongTermSeedVegChange_01_prep.R")
 
 # MODEL ----
 # Compile
-mod4 <- cmdstan_model("scripts/stan_models/compare_seed_veg_change.stan")
+mod4 <- cmdstan_model("scripts/stan_models/longterm_change.stan")
 
 # Fit
 ## may get warnings as model starts sampling at extreme values but fit is fine

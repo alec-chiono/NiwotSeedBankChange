@@ -18,7 +18,7 @@ source("scripts/02_SeedCommunityChange_05_STAN_01_prep.R")
 
 # MODEL ----
 # Compile
-mod2 <- cmdstan_model("scripts/stan_models/richness_diversity.stan")
+mod2 <- cmdstan_model("scripts/stan_models/community_indices.stan")
 
 # Fit
 ## may get warnings as model starts sampling at extreme values but fit is fine
