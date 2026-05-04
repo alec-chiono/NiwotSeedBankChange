@@ -162,19 +162,11 @@ library(dplyr)
       colour = .cols[["dark"]],
       linewidth = 0.9
     ) +
-    # White outline then black observed step histogram
-    geom_path(
-      data = obs_step,
-      aes(x = x, y = y),
-      colour = "white",
-      linewidth = 2.5,
-      linejoin = "mitre"
-    ) +
     geom_path(
       data = obs_step,
       aes(x = x, y = y),
       colour = "black",
-      linewidth = 1,
+      linewidth = 0.75,
       linejoin = "mitre"
     ) +
     coord_cartesian(xlim = c(bd$lo, bd$hi), ylim = c(0, bd$ylim_top * 1.05)) +
