@@ -34,72 +34,57 @@ fit4_wo_habitat <- mod4_wo_habitat$sample(
   chains = 4,
   parallel_chains = ifelse(parallel::detectCores() > 4, 4, 2),
   seed = 5336,
-  adapt_delta = 0.95
+  adapt_delta = 0.99
 )
 
-# CHECKS ----
-# Check model diagnostics (model doesn't always automatically warn you when there are issues)
+# DIAGNOSTICS ----
+## cmdstanr doesn't automatically warn you when there are Rhat issues
 fit4_wo_habitat$cmdstan_diagnose()
 
-## Posterior Predictive Checks
-### Extract draws
-seed_rep_wo_habitat <- fit4_wo_habitat$draws(
-  "seed_change_rep",
-  format = "matrix"
-)
-veg_rep_wo_habitat <- fit4_wo_habitat$draws("veg_count_rep", format = "matrix")
-y_seed <- dlist$seed_change
-y_veg <- dlist$veg_count
+# RANK PLOTS ----
+# Find parameters that had poor mixing
+summ <- fit4_wo_habitat$draws() %>% summarise_draws()
+poor_mixing <- summ %>%
+  filter(rhat > 1.01 | ess_bulk < 400 | ess_tail < 400) %>%
+  arrange(desc(rhat)) %>%
+  pull(variable)
 
-### Grouped by habitat and species
-ppc_stat_grouped(
-  y_seed,
-  seed_rep_wo_habitat,
-  group = USDA_lookup$USDA_code[dlist$seed_species],
-  stat = "mean"
-)
-ppc_stat_grouped(
-  y_seed,
-  seed_rep_wo_habitat,
-  group = USDA_lookup$USDA_code[dlist$seed_species],
-  stat = "sd"
-)
-ppc_stat_grouped(
-  y_veg,
-  veg_rep_wo_habitat,
-  group = USDA_lookup$USDA_code[dlist$veg_species],
-  stat = "mean"
-)
-ppc_stat_grouped(
-  y_veg,
-  veg_rep_wo_habitat,
-  group = USDA_lookup$USDA_code[dlist$veg_species],
-  stat = "sd"
-)
+# Rank plots for poorly mixed parameters, if any
+if (length(poor_mixing) == 0) {
+  message("No parameters with poor mixing detected.")
+} else {
+  mcmc_rank_overlay(
+    fit4_wo_habitat$draws(),
+    pars = poor_mixing
+  )
+}
 
 # VIZ ----
 theme_set(
   ggthemes::theme_tufte() + theme(panel.border = element_rect(fill = NA))
 ) #set theme for plotting
 
-### Get posterior draws for predicted seed change
+source("scripts/04_LongTermSeedVegChange_04_viz.R") #get spp_order
+
+# Get posterior draws for predicted seed change
 seed_draws_wo_habitat <- lapply(USDA_lookup$USDA_code_id, function(x) {
   tidy_draws(fit4_wo_habitat) %>%
     mutate(
       USDA_code_id = x,
       epred = get(paste0("a_seed[", x, "]")) +
-        get("b_seed") * get(paste0("b_veg[", x, "]"))
+        get(paste0("b_seed[", x, "]")) * # species-specific slope; was get("b_seed")
+          get(paste0("b_veg[", x, "]"))
     ) %>%
     select(USDA_code_id, epred)
 }) %>%
   do.call(rbind, .) %>%
   mutate(
-    USDA_name = factor(USDA_lookup$USDA_name[USDA_code_id], levels = spp_order)
+    Species = factor(USDA_lookup$Species[USDA_code_id], levels = spp_order)
   )
 
-### Get posterior draws for predicted veg change
+# Get posterior draws for predicted veg change
 veg_draws_wo_habitat <- tidy_draws(fit4_wo_habitat) %>%
-  select(starts_with("b_veg")) %>%
+  select(matches("^b_veg\\[\\d+\\]$")) %>%
   pivot_longer(
     cols = everything(),
     names_to = "parameter",
@@ -107,16 +92,16 @@ veg_draws_wo_habitat <- tidy_draws(fit4_wo_habitat) %>%
   ) %>%
   mutate(
     USDA_code_id = as.integer(str_extract(parameter, "(?<=\\[)\\d+")),
-    USDA_name = factor(USDA_lookup$USDA_name[USDA_code_id], levels = spp_order)
+    Species = factor(USDA_lookup$Species[USDA_code_id], levels = spp_order)
   )
 
-### Get posterior draws for relationship between veg and seed change
+# Get posterior draws for the community-level vegetation–seed linkage
 rel_draws_wo_habitat <- tidy_draws(fit4_wo_habitat) %>%
-  select(b_seed)
+  select(mu_b_seed) # was: select(b_seed)
 
 # Posterior distributions for change in seed abundance for each species
 figS3A <- seed_draws_wo_habitat %>%
-  ggplot(aes(x = epred, y = fct_rev(USDA_name))) +
+  ggplot(aes(x = epred, y = fct_rev(Species))) +
   geom_hline(
     yintercept = spp_order,
     linetype = 2,
@@ -134,7 +119,7 @@ figS3A <- seed_draws_wo_habitat %>%
 
 # Posterior distributions for change in veg cover for each species
 figS3B <- veg_draws_wo_habitat %>%
-  ggplot(aes(x = b_veg, y = fct_rev(USDA_name))) +
+  ggplot(aes(x = b_veg, y = fct_rev(Species))) +
   geom_hline(
     yintercept = spp_order,
     linetype = 2,
@@ -143,19 +128,24 @@ figS3B <- veg_draws_wo_habitat %>%
   ) +
   stat_slab(fill = "black", normalize = "groups") +
   geom_vline(xintercept = 0, linetype = 2, color = "red") +
-  scale_x_continuous(name = "Scaled Change per Year in Vegetation") +
+  scale_x_continuous(
+    name = "Scaled Change per Year in Vegetation",
+    limits = c(-0.05, 0.05)
+  ) +
   theme(
     axis.title.y = element_blank(),
     axis.text.y = element_blank(),
     axis.ticks.y = element_blank()
   )
 
-# Posterior distribution for relationship between seed and veg change
+# Posterior distribution for the community-level vegetation–seed linkage
 figS3C <- rel_draws_wo_habitat %>%
-  ggplot(aes(x = b_seed)) +
+  ggplot(aes(x = mu_b_seed)) + # was: aes(x = b_seed)
   stat_slab(fill = "black", normalize = "groups") +
   geom_vline(xintercept = 0, linetype = 2, color = "red") +
-  scale_x_continuous(name = "Relationship between Seed Change and Veg Change") +
+  scale_x_continuous(
+    name = "Relationship between Seed Change and Vegetation Change"
+  ) +
   theme(
     axis.title.y = element_blank(),
     axis.text.y = element_blank(),
@@ -167,9 +157,9 @@ figS3 <- (figS3A | figS3B + plot_layout(axes = "collect")) /
   plot_layout(guides = "collect") +
   plot_annotation(tag_level = "A")
 
-# Write Figure 3
+# Write Figure S3
 ggsave(
-  "figures/figS3.pdf",
+  "figures/FigureS3.pdf",
   figS3,
   width = 7.5,
   height = 5,

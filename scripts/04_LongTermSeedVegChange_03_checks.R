@@ -31,47 +31,24 @@ if (length(poor_mixing) == 0) {
   )
 }
 
+# POSTERIOR RETRODICTIVE CHECKS ----
+source("scripts/00_Function_plot_prc_hist.R")
 
-# PPC ----
-## Posterior Predictive Check
-### Extract draws
-seed_rep <- fit4$draws("seed_change_rep", format = "matrix")
-veg_rep <- fit4$draws("veg_count_rep", format = "matrix")
-y_seed <- dlist$seed_change
-y_veg <- dlist$veg_count
+# Figure S2A: are the veg slopes reasonable?
+figS2A <- plot_bveg_vs_ols(fit4, vegf, USDA_lookup)
 
-### Grouped by habitat and species
-ppc4A <- ppc_stat_grouped(
-  y_seed,
-  seed_rep,
-  group = USDA_lookup$USDA_code[dlist$seed_species],
-  stat = "mean"
-)
-ppc4B <- ppc_stat_grouped(
-  y_seed,
-  seed_rep,
-  group = USDA_lookup$USDA_code[dlist$seed_species],
-  stat = "sd"
-)
-ppc4C <- ppc_stat_grouped(
-  y_veg,
-  veg_rep,
-  group = USDA_lookup$USDA_code[dlist$veg_species],
-  stat = "mean"
-)
-ppc4D <- ppc_stat_grouped(
-  y_veg,
-  veg_rep,
-  group = USDA_lookup$USDA_code[dlist$veg_species],
-  stat = "sd"
-)
+# Figure S2B: does the seed predictive distribution differ by veg trend?
+figS2B <- plot_seed_prc(fit4, seedf)
 
-ppc4 <- (ppc4A + ppc4B) / (ppc4C + ppc4D) + plot_annotation(tag_level = "A")
+# Collate Figure S2
+figS2 <- figS2A / figS2B + plot_annotation(tag_levels = "A")
+
+# Write out Figure S2
 ggsave(
-  "figures/figS2.pdf",
-  ppc4,
-  width = 10,
-  height = 10,
+  "figures/FigureS2.pdf",
+  figS2,
+  width = 6.5,
+  height = 6.5,
   units = "in",
   dpi = 600
 )

@@ -32,11 +32,14 @@ seed_draws <- lapply(USDA_lookup$USDA_code_id, function(x) {
     names_to = "habitat",
     values_to = "value"
   ) %>%
-  mutate(USDA_name = USDA_lookup$USDA_name[USDA_code_id]) %>%
-  select(.draw, habitat, USDA_name, value) %>%
+  mutate(
+    USDA_code = USDA_lookup$USDA_code[USDA_code_id],
+    Species = USDA_lookup$Species[USDA_code_id]
+  ) %>%
+  select(.draw, habitat, USDA_code, Species, value) %>%
   filter(
-    paste0(USDA_name, habitat) %in%
-      with(spp_to_include, paste0(USDA_name, habitat))
+    paste0(USDA_code, habitat) %in%
+      with(spp_to_include, paste0(USDA_code, habitat))
   )
 
 ## Get posterior draws for predicted veg change
@@ -45,14 +48,15 @@ veg_draws <- tidy_draws(fit4) %>%
   pivot_longer(cols = -.draw, names_to = "parameter", values_to = "value") %>%
   mutate(
     USDA_code_id = as.integer(str_extract(parameter, "(?<=\\[)\\d+")),
-    USDA_name = USDA_lookup$USDA_name[USDA_code_id],
+    USDA_code = USDA_lookup$USDA_code[USDA_code_id],
+    Species = USDA_lookup$Species[USDA_code_id],
     habitat_id = as.integer(str_extract(parameter, "(?<=,)\\d+")),
     habitat = if_else(habitat_id == 1, "mesic", "xeric")
   ) %>%
-  select(.draw, habitat, USDA_name, value) %>%
+  select(.draw, habitat, USDA_code, Species, value) %>%
   filter(
-    paste0(USDA_name, habitat) %in%
-      with(spp_to_include, paste0(USDA_name, habitat))
+    paste0(USDA_code, habitat) %in%
+      with(spp_to_include, paste0(USDA_code, habitat))
   )
 
 ## Get posterior draws for relationship between veg and seed change
@@ -72,10 +76,13 @@ rel_draws <- lapply(USDA_lookup$USDA_code_id, function(x) {
     names_to = "habitat",
     values_to = "b_seed"
   ) %>%
-  mutate(USDA_name = USDA_lookup$USDA_name[USDA_code_id]) %>%
+  mutate(
+    USDA_code = USDA_lookup$USDA_code[USDA_code_id],
+    Species = USDA_lookup$Species[USDA_code_id]
+  ) %>%
   filter(
-    paste0(USDA_name, habitat) %in%
-      with(spp_to_include, paste0(USDA_name, habitat))
+    paste0(USDA_code, habitat) %in%
+      with(spp_to_include, paste0(USDA_code, habitat))
   )
 
 # VIZ ----
@@ -91,19 +98,19 @@ theme_set(
 ## Figure out rank order for species on y-axis
 spp_order <- seed_draws %>%
   filter(
-    paste0(USDA_name, habitat) %in%
-      with(spp_to_include, paste0(USDA_name, habitat))
+    paste0(USDA_code, habitat) %in%
+      with(spp_to_include, paste0(USDA_code, habitat))
   ) %>%
-  group_by(USDA_name) %>%
+  group_by(Species) %>%
   summarize(mean = mean(value), .groups = "drop") %>%
   arrange(mean) %>%
-  pull(USDA_name) %>%
+  pull(Species) %>%
   as.character()
 
-# Fig. 3A: Posteriors of predicted seed change
+# Fig. 4A: Posteriors of predicted seed change
 fig4A <- seed_draws %>%
-  mutate(USDA_name = factor(as.character(USDA_name), levels = spp_order)) %>%
-  ggplot(aes(x = value, y = fct_rev(USDA_name), fill = habitat)) +
+  mutate(Species = factor(as.character(Species), levels = spp_order)) %>%
+  ggplot(aes(x = value, y = fct_rev(Species), fill = habitat)) +
   geom_hline(
     yintercept = spp_order,
     linetype = 2,
@@ -123,10 +130,10 @@ fig4A <- seed_draws %>%
   ) +
   theme(axis.text.y = element_text(face = "italic"))
 
-# Fig. 3A: Posteriors of predicted veg change
+# Fig. 4A: Posteriors of predicted veg change
 fig4B <- veg_draws %>%
-  mutate(USDA_name = factor(as.character(USDA_name), levels = spp_order)) %>%
-  ggplot(aes(x = value, y = fct_rev(USDA_name), fill = habitat)) +
+  mutate(Species = factor(as.character(Species), levels = spp_order)) %>%
+  ggplot(aes(x = value, y = fct_rev(Species), fill = habitat)) +
   geom_hline(
     yintercept = spp_order,
     linetype = 2,
@@ -135,7 +142,10 @@ fig4B <- veg_draws %>%
   ) +
   stat_slab(alpha = 0.5, normalize = "groups") +
   geom_vline(xintercept = 0, linetype = 2, color = "red") +
-  scale_x_continuous(name = "Scaled Change per Year in Vegetation") +
+  scale_x_continuous(
+    name = "Scaled Change per Year in Vegetation",
+    limits = c(-0.05, 0.05)
+  ) +
   scale_y_discrete(name = "Species") +
   scale_fill_manual(
     values = c("mesic" = "green4", "xeric" = "tan4"),
@@ -143,7 +153,7 @@ fig4B <- veg_draws %>%
   ) +
   theme(axis.text.y = element_text(face = "italic"))
 
-# Fig. 3A: Posteriors of relationship between seed and veg change
+# Fig. 4A: Posteriors of relationship between seed and veg change
 fig4C <- rel_draws %>%
   ggplot(aes(x = b_seed, fill = habitat)) +
   stat_slab(alpha = 0.5, normalize = "groups") +
@@ -163,7 +173,8 @@ fig4C <- rel_draws %>%
   )
 
 fig4 <- ((fig4A + fig4B + plot_layout(axes = "collect")) / fig4C) +
-  plot_layout(guides = "collect")
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_level = "A")
 
 ggsave(
   "figures/Figure4.pdf",

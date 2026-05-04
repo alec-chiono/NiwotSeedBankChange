@@ -4,8 +4,6 @@
 # PACKAGES ----
 library(bayesplot)
 library(posterior)
-library(loo)
-library(patchwork)
 
 # MODEL ----
 source("scripts/02_SeedCommunityChange_05_STAN_02_fit.R")
@@ -34,6 +32,5 @@ if (length(poor_mixing) == 0) {
 
 # POSTERIOR RETRODICTIVE CHECKS ----
 source("scripts/00_Function_plot_prc_hist.R")
-plot_prc_hist(fit2, seedbank_df, max_count = 1500, n_bins = 100)
-plot_prc_hist(fit2, seedbank_df, max_count = 100, n_bins = 100)
-plot_prc_hist(fit2, seedbank_df, max_count = 20, n_bins = 10)
+(figS1 <- plot_prc_hist2(fit2, seedbank_df, max_count = 20, n_bins = 10))
+ggsave("figures/FigureS1.pdf", figS1, dpi = 600)

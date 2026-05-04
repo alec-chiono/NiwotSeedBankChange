@@ -26,7 +26,6 @@ fit4 <- mod4$sample(
   data = dlist,
   chains = 4,
   parallel_chains = ifelse(parallel::detectCores() > 4, 4, 2),
-  seed = 5336,
-  adapt_delta = 0.99,
-  max_treedepth = 15
+  seed = 11001001,
+  adapt_delta = 0.99
 )

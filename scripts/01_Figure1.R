@@ -9,7 +9,7 @@ library(patchwork)
 
 # DATA ----
 # Source data download function
-source("scripts/00_DownloadData.R")
+source("scripts/00_Function_data_download.R")
 
 # Download and wrangle data
 seed_count_df <-
@@ -68,7 +68,7 @@ icon_df <-
   tibble(
     Species = names(symbol_map),
     image = unname(symbol_map),
-    y_icon = -2.2
+    y_icon = -4
   ) %>%
   mutate(Species = factor(Species, levels = species_order))
 
@@ -92,7 +92,7 @@ p_main <- seed_count_df %>%
     data = icon_df,
     aes(x = Species, y = y_icon, image = image),
     inherit.aes = FALSE,
-    size = 0.065,
+    size = 0.15,
     by = "width"
   ) +
   scale_fill_manual(
@@ -105,12 +105,13 @@ p_main <- seed_count_df %>%
   ) +
   scale_y_continuous(
     name = "                              # Germinable Seeds",
-    expand = expansion(mult = c(0, 0.05), add = c(3.2, 0)),
-    #breaks = c(0, 5, 10, 15, 20, 80, 90, 100),
-    limits = c(NA, 100)
+    #expand = expansion(mult = c(0, 0.05), add = c(2, 0)),
+    breaks = c(0, 5, 10, 15, 20, 80, 85, 90, 95, 100),
+    labels = c(0, "", 10, "", 20, 80, "", 90, "", 100),
+    limits = c(-5.5, 100)
   ) +
   #scale_x_discrete(expand = expansion(add = c(2.5, 0.2))) +
-  scale_y_break(c(21, 80), scales = 0.25) +
+  scale_y_break(c(21, 80)) +
   coord_cartesian(clip = "off") +
   theme_tufte() +
   theme(
@@ -118,7 +119,7 @@ p_main <- seed_count_df %>%
       size = 8,
       angle = 52,
       hjust = 1,
-      vjust = 1,
+      #vjust = 0,
       face = "italic"
     ),
     axis.text.y.right = element_blank(),
@@ -143,7 +144,7 @@ year_leg <- tibble(
 )
 
 gf_leg <- tibble(
-  x = c(9.3, 11.3, 13),
+  x = c(8.6, 11, 13),
   y = 1,
   image = c(gram, cush, forb),
   lab = c("Graminoid", "Cushion", "Other forb")
@@ -192,3 +193,4 @@ ggsave(
   units = "cm",
   dpi = 600
 )
+

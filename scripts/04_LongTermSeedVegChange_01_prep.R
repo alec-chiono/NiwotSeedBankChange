@@ -20,9 +20,11 @@ seedbank_df <- data_list$seedbank_composition.ac_hh.data %>%
   filter(
     substr(USDA_code, 1, 1) != 2 & USDA_code != "CAREX" & USDA_code != "POA"
   ) %>% #remove records not identified to species
-  mutate(USDA_name = sub("\\s*var\\..*$", "", USDA_name)) %>%
   group_by(year, habitat, plot, USDA_code, USDA_name) %>%
   summarize(count = sum(count), .groups = "drop") %>%
+  group_by(habitat, plot, USDA_code) %>%
+  filter(any(count > 0)) %>%
+  ungroup() %>%
   group_by(USDA_code, USDA_name) %>%
   mutate(count_scaled = scale(count)[, 1]) %>%
   ungroup() %>%
@@ -41,11 +43,13 @@ saddlegrid_df <- data_list$saddptqd.hh.data.csv %>%
     plot %in% saddlegrid_habitat$plot,
     hit_type %in% c("top", "bottom") #middle and extra hits haven't been done across whole time period
   ) %>%
-  mutate(USDA_name = sub("\\s*var\\..*$", "", USDA_name)) %>%
-  group_by(year, plot, USDA_code, USDA_name) %>%
+  group_by(year, plot, USDA_code) %>%
   summarize(count = length(hit_type), .groups = "drop") %>%
   complete(plot, USDA_code, year, fill = list(count = 0)) %>% #add records for species not seen in some years
-  group_by(plot, USDA_code, USDA_name) %>%
+  group_by(plot, USDA_code) %>%
+  filter(any(count > 0)) %>%
+  ungroup() %>%
+  group_by(plot, USDA_code) %>%
   mutate(
     count_scaled = scale(count, center = FALSE)[, 1],
     count_scaled = ifelse(is.na(count_scaled), 0, count_scaled)
@@ -55,34 +59,39 @@ saddlegrid_df <- data_list$saddptqd.hh.data.csv %>%
 
 ## Remove species-habitat combinations that weren't actually present in seed bank data
 spp_to_include <- data_list$seedbank_composition.ac_hh.data %>%
-  mutate(USDA_name = sub("\\s*var\\..*$", "", USDA_name)) %>%
   filter(
-    substr(USDA_code, 1, 1) != 2 & USDA_code != "CAREX" & USDA_code != "POA"
+    substr(USDA_code, 1, 1) != 2 & USDA_code != "CAREX" & USDA_code != "POA",
+    count > 0
   ) %>%
-  filter(habitat == "mesic", count > 0) %>%
-  distinct(USDA_name, habitat) %>%
-  select(USDA_name, habitat) %>%
+  distinct(USDA_code, habitat) %>%
+  select(USDA_code, habitat) %>%
+  mutate(name = "seed", value = 1) %>%
   rbind(
-    data_list$seedbank_composition.ac_hh.data %>%
-      mutate(USDA_name = sub("\\s*var\\..*$", "", USDA_name)) %>%
+    saddlegrid_df %>%
       filter(
-        substr(USDA_code, 1, 1) != 2 & USDA_code != "CAREX" & USDA_code != "POA"
+        count > 0,
+        USDA_code %in% seedbank_df$USDA_code
       ) %>%
-      filter(habitat == "xeric", count > 0) %>%
-      distinct(USDA_name, habitat) %>%
-      select(USDA_name, habitat)
-  )
+      distinct(USDA_code, habitat) %>%
+      select(USDA_code, habitat) %>%
+      mutate(name = "veg", value = 1)
+  ) %>%
+  pivot_wider() %>%
+  drop_na()
 
 ### Filter seed bank data
 seedf <- seedbank_df %>%
   filter(
-    USDA_code %in% saddlegrid_df$USDA_code, #rm species that aren't in veg data
-    paste0(USDA_name, habitat) %in%
-      with(spp_to_include, paste0(USDA_name, habitat)) #remove species-habitat combos that weren't present
+    paste0(USDA_code, habitat) %in%
+      with(spp_to_include, paste0(USDA_code, habitat)) #remove species-habitat combos that weren't present in data
   )
 
-### Filter veg data to only include species now in seedf
-vegf <- saddlegrid_df %>% filter(USDA_code %in% seedf$USDA_code)
+### Filter veg data to only include species-habiat combos now in seedf
+vegf <- saddlegrid_df %>%
+  filter(
+    paste0(USDA_code, habitat) %in%
+      with(spp_to_include, paste0(USDA_code, habitat))
+  ) #remove species-habitat combos that weren't present in data)
 
 ## Create lookup data.frames for variables that will be scaled or turned into IDs for stan
 year_lookup <- vegf %>%
@@ -92,8 +101,11 @@ year_lookup <- vegf %>%
   arrange(year)
 
 USDA_lookup <- seedf %>%
-  mutate(USDA_code_id = as.integer(factor(USDA_code))) %>%
-  select(USDA_code_id, USDA_code, USDA_name) %>%
+  mutate(
+    USDA_code_id = as.integer(factor(USDA_code)),
+    Species = sub("\\s*var\\..*$", "", USDA_name),
+  ) %>%
+  select(USDA_code_id, USDA_code, USDA_name, Species) %>%
   distinct() %>%
   arrange(USDA_code_id)
 
@@ -135,4 +147,18 @@ dlist <- list(
   Nseed_plots = nrow(seed_plot_lookup),
   seed_plot = as.integer(factor(seedf$plot)),
   seed_habitat = seed_plot_lookup$habitat_id
+)
+
+stopifnot(
+  # No seed obs where both years were zero (change = 0 from structural absence)
+  # Note: change = 0 can still occur legitimately (equal non-zero scaled counts)
+  !any(seedf$count1989 == 0 & seedf$count2023 == 0),
+  # Stan array lengths are consistent
+  length(dlist$veg_species) == dlist$Nveg,
+  length(dlist$seed_species) == dlist$Nseed,
+  length(dlist$veg_habitat) == dlist$Nveg_plots,
+  length(dlist$seed_habitat) == dlist$Nseed_plots,
+  # Species IDs are contiguous (no gaps from filtering)
+  max(dlist$veg_species) == dlist$Kspecies,
+  max(dlist$seed_species) == dlist$Kspecies
 )
