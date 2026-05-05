@@ -252,7 +252,7 @@ To reproduce all analyses from scratch:
 
 If you use this code or data, please cite:
 
-**Chiono, A., Humphries, H. C., Willis, G., & Emery, N. C. (in prep). ** Seed bank reorganization in an alpine dry meadow plant community. 
+**Chiono, A., Humphries, H. C., Willis, G., & Emery, N. C. (in prep).** Seed bank reorganization in an alpine dry meadow plant community. 
 
 And cite the Niwot Ridge LTER datasets:
 
