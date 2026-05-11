@@ -26,6 +26,6 @@ fit4 <- mod4$sample(
   data = dlist,
   chains = 4,
   parallel_chains = ifelse(parallel::detectCores() > 4, 4, 2),
-  seed = 11001001,
+  seed = 1100100,
   adapt_delta = 0.99
 )

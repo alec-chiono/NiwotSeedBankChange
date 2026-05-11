@@ -44,7 +44,7 @@ seed_draws <- lapply(USDA_lookup$USDA_code_id, function(x) {
 
 ## Get posterior draws for predicted veg change
 veg_draws <- tidy_draws(fit4) %>%
-  select(.draw, starts_with("b_veg")) %>%
+  select(.draw, matches("^b_veg\\[")) %>%
   pivot_longer(cols = -.draw, names_to = "parameter", values_to = "value") %>%
   mutate(
     USDA_code_id = as.integer(str_extract(parameter, "(?<=\\[)\\d+")),
@@ -120,7 +120,7 @@ fig4A <- seed_draws %>%
   stat_slab(alpha = 0.5, normalize = "groups") +
   geom_vline(xintercept = 0, linetype = 2, color = "red") +
   scale_x_continuous(
-    name = "Scaled Change per Year in Seed Bank",
+    name = "Scaled Between-Year Change in Seed Bank",
     limits = c(-0.2, 0.2)
   ) +
   scale_y_discrete(name = "Species") +
@@ -143,8 +143,7 @@ fig4B <- veg_draws %>%
   stat_slab(alpha = 0.5, normalize = "groups") +
   geom_vline(xintercept = 0, linetype = 2, color = "red") +
   scale_x_continuous(
-    name = "Scaled Change per Year in Vegetation",
-    limits = c(-0.05, 0.05)
+    name = "Scaled Between-Year Change in Vegetation"
   ) +
   scale_y_discrete(name = "Species") +
   scale_fill_manual(
