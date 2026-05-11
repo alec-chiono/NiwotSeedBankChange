@@ -15,7 +15,9 @@ data_list <- download_data(seed = TRUE, coloc_veg = TRUE)
 seed_df <- data_list$seedbank_composition.ac_hh.data %>%
   filter(
     year == 2023, #use only recent data
-    substr(USDA_code, 1, 1) != 2 & USDA_code != "CAREX" & USDA_code != "POA" #remove records not identified to species
+    substr(USDA_code, 1, 1) != 2 &
+      USDA_code != "CAREX" &
+      USDA_code != "POA" #remove records not identified to species
   ) %>%
   group_by(habitat, plot, replicate, USDA_name) %>%
   summarize(count = sum(count), .groups = "drop") %>% #sum counts across depths
@@ -28,7 +30,9 @@ seed_df <- data_list$seedbank_composition.ac_hh.data %>%
 ### Co-located veg data
 veg_df <- data_list$veg_composition.ac_hh.data %>%
   filter(
-    substr(USDA_code, 1, 1) != 2 & USDA_code != "POA" & USDA_code != "CAREX"
+    substr(USDA_code, 1, 1) != 2 &
+      USDA_code != "POA" &
+      USDA_code != "CAREX"
   ) %>% #remove records not identified to species
   mutate(community = "vegetation") %>% #denote this as vegetation community data
   select(community, habitat:plot, USDA_name) %>% #select relevant columns

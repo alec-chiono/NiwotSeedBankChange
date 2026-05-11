@@ -37,11 +37,6 @@ anova.cca(
 
 
 # VIZ ----
-# Set plotting theme
-theme_set(
-  +theme()
-)
-
 # Extract scores
 sv_scores <- sv_meta %>%
   cbind(scores(sv_rda)$sites)

@@ -12,7 +12,9 @@ source("scripts/00_Function_data_download.R")
 sc_df <-
   download_data(seed = TRUE)$seedbank_composition.ac_hh.data %>%
   filter(
-    substr(USDA_code, 1, 1) != 2 & USDA_code != "CAREX" & USDA_code != "POA"
+    substr(USDA_code, 1, 1) != 2 &
+      USDA_code != "CAREX" &
+      USDA_code != "POA"
   ) %>% #remove records not identified to species
   select(year:depth, USDA_name, count) %>% #select relevant columns
   pivot_wider(names_from = USDA_name, values_from = count) %>% #pivot into proper format for analyses
