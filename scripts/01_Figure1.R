@@ -104,7 +104,7 @@ p_main <- seed_count_df %>%
     guide = "none"
   ) +
   scale_y_continuous(
-    name = "                              # Germinable Seeds",
+    name = "                              # Seedlings",
     #expand = expansion(mult = c(0, 0.05), add = c(2, 0)),
     breaks = c(0, 5, 10, 15, 20, 80, 85, 90, 95, 100),
     labels = c(0, "", 10, "", 20, 80, "", 90, "", 100),
