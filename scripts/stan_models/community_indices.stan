@@ -221,21 +221,22 @@ generated quantities {
       // lambda_s rounds to machine zero.
       real total_lambda = sum(lambda_s);
       real H = 0.0;
+      int S_present = 0;
       for (s in 1:N_species) {
         real p = lambda_s[s] / total_lambda;
-        if (p > 1e-15)
+        if (p > 1e-15) {
           H -= p * log(p);
+          S_present += 1;
+        }
       }
 
       // Hill N1: effective number of equally-abundant species on the Shannon scale
       hill_N1[y, h] = exp(H);
 
-      // Pielou's J: H relative to its upper bound log(S_pool).
-      // Using log(N_species) as denominator — the maximum H achievable given
-      // the observed species pool — guarantees J ∈ [0, 1].
-      // J = 1: all species equally abundant; J → 0: single species dominates.
+      // Evenness: H relative to its upper bound log(S_present).
+      // = 1: all species equally abundant; = 0: single species dominates.
       // Returns 0 for a single-species pool to avoid division by zero.
-      evenness[y, h] = (N_species > 1) ? H / log(N_species) : 0.0;
+      evenness[y, h] = (S_present > 1) ? H / log(S_present) : 0.0;
     }
   }
 }

@@ -25,7 +25,7 @@ post2_counts <-
   group_by(.draw, year, habitat) %>%
   summarize(scaled_total = sum(scaled_count), .groups = "drop") %>%
   mutate(
-    metric = "Total Seeds",
+    metric = "Abundance",
     year = factor(
       year,
       levels = 1:dlist$N_years,
@@ -83,23 +83,25 @@ post2 <- bind_rows(post2_indices, post2_counts) %>%
     metric = factor(
       metric,
       levels = c(
-        "Total Seeds",
+        "Abundance",
         "Richness",
         "Evenness",
         "Diversity"
       )
     )
-  )
+  ) %>%
+  rename(Year = year, Habitat = habitat) %>%
+  mutate(Habitat = str_to_sentence(Habitat))
 
-# VIZ ----
-# Set plotting theme
-theme_set(
-  ggthemes::theme_tufte() + theme(panel.border = element_rect(fill = NA))
-)
+  # VIZ ----
+  # Set plotting theme
+  theme_set(
+    ggthemes::theme_tufte() + theme(panel.border = element_rect(fill = NA))
+  )
 
 ## Fig. 2B: Estimates for each year and habitat
 fig2B <- post2 %>%
-  ggplot(aes(x = year)) +
+  ggplot(aes(x = Year)) +
   stat_slab(
     aes(y = value),
     fill = "black",
@@ -107,13 +109,13 @@ fig2B <- post2 %>%
     linewidth = 0.1,
     normalize = "groups"
   ) +
-  facet_grid(metric ~ habitat, scales = "free_y") +
+  facet_grid(metric ~ Habitat, scales = "free_y") +
   scale_y_continuous(name = "Estimated Value", limits = c(0, NA))
 
 ## Fig. 2C Estimates for change in indices over time
 fig2C <- post2 %>%
-  arrange(.draw, metric, habitat, year) %>%
-  group_by(.draw, metric, habitat) %>%
+  arrange(.draw, metric, Habitat, Year) %>%
+  group_by(.draw, metric, Habitat) %>%
   mutate(diff = lead(value) - value, .groups = "drop") %>%
   filter(!is.na(diff)) %>%
   ggplot() +
@@ -125,7 +127,7 @@ fig2C <- post2 %>%
     normalize = "groups"
   ) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
-  facet_grid(metric ~ habitat, scales = "free_y") +
+  facet_grid(metric ~ Habitat, scales = "free_y") +
   scale_y_continuous(name = "Difference between Years") +
   theme(
     axis.title.x = element_blank(),

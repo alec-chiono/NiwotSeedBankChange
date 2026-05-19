@@ -1,4 +1,4 @@
-# Evaluate contributions of species replacement and abundance gradient to seed bank community change
+# Evaluate contributions of Species turnover and Abdundance shift to seed bank community change
 # Alec Chiono; alec.chiono@colorado.edu
 
 # PACKAGES ----
@@ -27,7 +27,7 @@ adonis2(
   by = "terms"
 )
 
-## Abundance gradient component
+## Abdundance shift component
 adonis2(
   beta_abund$beta.bray.gra ~ year * habitat * depth,
   data = sc_meta,
@@ -61,8 +61,8 @@ mean_between_sub <- function(dist_obj, meta_sub, var, g1, g2) {
 
 comparisons <- tribble(
   ~group    , ~label                    , ~year_filter ,
-  "Habitat" , "Mesic vs. xeric\n(1989)" ,         1989 ,
-  "Habitat" , "Mesic vs. xeric\n(2023)" ,         2023 ,
+  "Habitat" , "Mesic vs. Xeric\n(1989)" ,         1989 ,
+  "Habitat" , "Mesic vs. Xeric\n(2023)" ,         2023 ,
   "Year"    , "1989 vs. 2023\n(xeric)"  , NA           ,
   "Year"    , "1989 vs. 2023\n(mesic)"  , NA
 )
@@ -71,9 +71,9 @@ comparisons <- tribble(
 results <- bind_rows(
   # Habitat comparisons (within year)
   tibble(
-    group = "Habitat",
-    label = "Mesic vs. xeric\n(1989)",
-    component = c("Species replacement", "Abundance gradient"),
+    group = "Habitat (Mesic vs. Xeric)",
+    label = "1989",
+    component = c("Species turnover", "Abdundance shift"),
     value = c(
       mean_between_sub(
         beta_abund$beta.bray.bal,
@@ -92,9 +92,9 @@ results <- bind_rows(
     )
   ),
   tibble(
-    group = "Habitat",
-    label = "Mesic vs. xeric\n(2023)",
-    component = c("Species replacement", "Abundance gradient"),
+    group = "Habitat (Mesic vs. Xeric)",
+    label = "2023",
+    component = c("Species turnover", "Abdundance shift"),
     value = c(
       mean_between_sub(
         beta_abund$beta.bray.bal,
@@ -114,9 +114,9 @@ results <- bind_rows(
   ),
   # Year comparisons (within habitat)
   tibble(
-    group = "Year",
-    label = "1989 vs. 2023\n(xeric)",
-    component = c("Species replacement", "Abundance gradient"),
+    group = "Year (1989 vs. 2023)",
+    label = "Xeric",
+    component = c("Species turnover", "Abdundance shift"),
     value = c(
       mean_between(
         beta_abund$beta.bray.bal,
@@ -135,9 +135,9 @@ results <- bind_rows(
     )
   ),
   tibble(
-    group = "Year",
-    label = "1989 vs. 2023\n(mesic)",
-    component = c("Species replacement", "Abundance gradient"),
+    group = "Year (1989 vs. 2023)",
+    label = "Mesic",
+    component = c("Species turnover", "Abdundance shift"),
     value = c(
       mean_between(
         beta_abund$beta.bray.bal,
@@ -157,19 +157,22 @@ results <- bind_rows(
   )
 ) %>%
   mutate(
-    group = factor(group, levels = c("Habitat", "Year")),
+    group = factor(
+      group,
+      levels = c("Habitat (Mesic vs. Xeric)", "Year (1989 vs. 2023)")
+    ),
     label = factor(
       label,
       levels = c(
-        "Mesic vs. xeric\n(1989)",
-        "Mesic vs. xeric\n(2023)",
-        "1989 vs. 2023\n(xeric)",
-        "1989 vs. 2023\n(mesic)"
+        "1989",
+        "2023",
+        "Mesic",
+        "Xeric"
       )
     ),
     component = factor(
       component,
-      levels = c("Species replacement", "Abundance gradient")
+      levels = c("Species turnover", "Abdundance shift")
     )
   )
 
@@ -179,8 +182,8 @@ figS4 <- ggplot(results, aes(x = label, y = value, fill = component)) +
   facet_grid(~group, scales = "free_x", space = "free_x") +
   scale_fill_manual(
     values = c(
-      "Species replacement" = "#4E9AC7", # adjust to match your palette
-      "Abundance gradient" = "#F4A460"
+      "Species turnover" = "#4E9AC7", # adjust to match your palette
+      "Abdundance shift" = "#F4A460"
     ),
     name = NULL
   ) +

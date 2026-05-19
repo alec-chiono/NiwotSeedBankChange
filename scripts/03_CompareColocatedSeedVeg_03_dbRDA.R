@@ -43,16 +43,20 @@ sv_scores <- sv_meta %>%
 
 # Fig. 3: dbRDA comparing seed bank and veg community from same locations
 fig3 <- sv_scores %>%
+  rename(Community = community, Habitat = habitat) %>%
+  mutate(
+    Community = str_to_sentence(Community),
+    Habitat = str_to_sentence(Habitat),
+  ) %>%
   ggplot(aes(x = dbRDA1, y = dbRDA2)) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray70") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray70") +
-  geom_point(aes(color = community, shape = habitat), size = 3) +
+  geom_point(aes(color = Community, shape = Habitat), size = 3) +
   scale_shape_manual(values = c(16, 17)) +
   scale_color_manual(values = c("brown4", "green4")) +
   ggthemes::theme_tufte() +
   theme(
     panel.border = element_rect(fill = NA),
-    legend.position = "top",
     text = element_text(size = 8),
     legend.box.spacing = unit(2, "pt"),
     legend.margin = margin(0, 0, 0, 0),

@@ -49,11 +49,11 @@ sc_scores <- sc_meta %>%
 
 ## Fig. 1A: Just sample scores
 fig2A <- sc_scores %>%
-  mutate(habitat_depth = paste(habitat, depth, sep = "_")) %>%
+  rename(Year = year, Habitat = habitat) %>%
+  mutate(Habitat = str_to_sentence(Habitat)) %>%
   ggplot(aes(x = RDA1, y = RDA2)) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray70") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray70") +
-  geom_point(aes(color = year, shape = habitat), size = 5) +
+  geom_point(aes(color = Year, shape = Habitat), size = 5) +
   scale_shape_manual(values = c(16, 17)) +
-  scale_color_manual(values = c("skyblue3", "red4")) +
-  theme(legend.position = "top")
+  scale_color_manual(values = c("skyblue3", "red4"))

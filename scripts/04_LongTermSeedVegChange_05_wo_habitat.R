@@ -111,7 +111,7 @@ figS3A <- seed_draws_wo_habitat %>%
   stat_slab(fill = "black", normalize = "groups") +
   geom_vline(xintercept = 0, linetype = 2, color = "red") +
   scale_x_continuous(
-    name = "Scaled Change per Year in Seed Bank",
+    name = "Annual change in seed bank abundance",
     limits = c(-0.2, 0.2)
   ) +
   scale_y_discrete(name = "Species") +
@@ -129,7 +129,7 @@ figS3B <- veg_draws_wo_habitat %>%
   stat_slab(fill = "black", normalize = "groups") +
   geom_vline(xintercept = 0, linetype = 2, color = "red") +
   scale_x_continuous(
-    name = "Scaled Change per Year in Vegetation",
+    name = "Annual change in vegetation abundance",
     limits = c(-0.05, 0.05)
   ) +
   theme(
@@ -144,7 +144,7 @@ figS3C <- rel_draws_wo_habitat %>%
   stat_slab(fill = "black", normalize = "groups") +
   geom_vline(xintercept = 0, linetype = 2, color = "red") +
   scale_x_continuous(
-    name = "Relationship between Seed Change and Vegetation Change"
+    name = "Relationship between seed bank change and vegetation change"
   ) +
   theme(
     axis.title.y = element_blank(),

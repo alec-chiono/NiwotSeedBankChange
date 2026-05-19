@@ -136,7 +136,7 @@ library(dplyr)
 }
 
 # Build a single ggplot panel from .prc_bin_data output
-.prc_panel <- function(bd, title, xlab, ylab = "Number of species") {
+.prc_panel <- function(bd, xlab, ylab = "Number of species") {
   # Build a staircase path for the observed histogram so both horizontal
   # and vertical connectors between bins are drawn.
   # x alternates: left edge of bin 1, then for each subsequent break the
@@ -170,7 +170,7 @@ library(dplyr)
       linejoin = "mitre"
     ) +
     coord_cartesian(xlim = c(bd$lo, bd$hi), ylim = c(0, bd$ylim_top * 1.05)) +
-    labs(title = title, x = xlab, y = ylab) +
+    labs(x = xlab, y = ylab) +
     .betancourt_theme()
 }
 
@@ -314,41 +314,36 @@ plot_bveg_vs_ols <- function(fit, vegf, USDA_lookup) {
   ols <- .ols_slopes(vegf)
   merged <- merge(bveg, ols, by = c("USDA_code", "habitat"))
 
-  make_panel <- function(hab) {
-    d <- merged[merged$habitat == hab, ]
-    lims <- range(c(d$ols_slope, d$lo90, d$hi90), na.rm = TRUE)
-    title <- paste0("Veg slopes \u00D7 ", tools::toTitleCase(hab))
+  lims <- range(c(merged$ols_slope, merged$lo90, merged$hi90), na.rm = TRUE)
 
-    ggplot(d, aes(x = ols_slope, y = median)) +
-      geom_hline(yintercept = 0, linetype = "dotted", colour = "grey80") +
-      geom_vline(xintercept = 0, linetype = "dotted", colour = "grey80") +
-      geom_abline(
-        slope = 1,
-        intercept = 0,
-        linetype = "dashed",
-        colour = "grey50"
-      ) +
-      geom_segment(
-        aes(xend = ols_slope, y = lo90, yend = hi90),
-        colour = .cols[["light_highlight"]],
-        linewidth = 0.8
-      ) +
-      geom_segment(
-        aes(xend = ols_slope, y = lo50, yend = hi50),
-        colour = .cols[["mid"]],
-        linewidth = 1.5
-      ) +
-      geom_point(colour = .cols[["dark"]], size = 1.8) +
-      coord_cartesian(xlim = lims, ylim = lims) +
-      labs(
-        title = title,
-        x = "OLS slope (observed)",
-        y = "Posterior median b_veg"
-      ) +
-      .betancourt_theme()
-  }
-
-  make_panel("mesic") + make_panel("xeric")
+  merged %>%
+    rename(Habitat = habitat) %>%
+    mutate(Habitat = str_to_sentence(Habitat)) %>%
+    ggplot(aes(x = ols_slope, y = median, color = Habitat)) +
+    geom_hline(yintercept = 0, linetype = "dotted", colour = "grey80") +
+    geom_vline(xintercept = 0, linetype = "dotted", colour = "grey80") +
+    geom_abline(
+      slope = 1,
+      intercept = 0,
+      linetype = "dashed",
+      colour = "grey50"
+    ) +
+    geom_segment(
+      aes(xend = ols_slope, y = lo90, yend = hi90),
+      linewidth = 0.8
+    ) +
+    geom_segment(
+      aes(xend = ols_slope, y = lo50, yend = hi50),
+      linewidth = 1.5
+    ) +
+    geom_point(size = 1.8) +
+    scale_color_manual(values = c("Mesic" = "green4", "Xeric" = "tan4")) +
+    coord_cartesian(xlim = lims, ylim = lims) +
+    labs(
+      x = "OLS slope",
+      y = "Posterior median slope"
+    ) +
+    .betancourt_theme()
 }
 
 
@@ -368,8 +363,7 @@ plot_seed_prc <- function(
   bd <- .prc_bin_data(seed_draws, obs_change, n_bins, probs)
   .prc_panel(
     bd,
-    title = paste0("Seed change (n=", nrow(seedf), ")"),
-    xlab = "Seed change (per year)",
-    ylab = "Count"
+    xlab = "Annual change in seed bank",
+    ylab = "Frequency"
   )
 }
